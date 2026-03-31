@@ -170,6 +170,37 @@
         );
       }
 
+      function exportPreloadedHTML(bgOptions, btnOptions, library) {
+        // Grab the current HTML source
+        const src = document.documentElement.outerHTML;
+
+        // Build JSON strings of the asset arrays
+        const bgJSON = JSON.stringify(bgOptions);
+        const btnJSON = JSON.stringify(btnOptions);
+        const libJSON = JSON.stringify(library);
+
+        // Inject a bootstrap script that pre-populates localStorage before React mounts
+        const inject = `
+    <script id="preload-data">
+      (function(){
+        try { localStorage.setItem('bg-library', ${JSON.stringify(bgJSON)}); } catch(e){}
+        try { localStorage.setItem('btn-library', ${JSON.stringify(btnJSON)}); } catch(e){}
+        try { localStorage.setItem('creator-library', ${JSON.stringify(libJSON)}); } catch(e){}
+      })();
+    <\/script>`;
+
+        // Insert just before the closing </body>
+        const html = src.replace('</body>', inject + '\n  </body>');
+        const blob = new Blob([html], { type: 'text/html' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'index.html';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(a.href);
+      }
+
       function App(){
         const [activeTab,setActiveTab]=useState("generator");
         const [showPwModal,setShowPwModal]=useState(false);
@@ -531,6 +562,23 @@
                     ?<span style={{color:"#00d4aa",fontSize:13,fontWeight:700}}>✓ Setup complete — Generator is ready</span>
                     :<span style={{color:"#555",fontSize:12}}>Upload backgrounds and buttons to enable the generator</span>}
                 </div>
+
+                {allReady&&(
+                  <div style={{marginTop:16,background:"#0d0d0d",border:"1px solid #2a2a2a",borderRadius:10,padding:16}}>
+                    <p style={{fontSize:12,fontWeight:700,color:"#fff",marginBottom:4}}>📦 Export Pre-loaded HTML</p>
+                    <p style={{fontSize:11,color:"#555",marginBottom:12,lineHeight:1.5}}>
+                      Downloads a new <code style={{background:"#1a1a1a",padding:"1px 5px",borderRadius:3,color:"#00d4aa"}}>index.html</code> with all your assets baked in.
+                      Upload it to GitHub to replace the current file — anyone opening the link will see the tool fully loaded, no setup required.
+                    </p>
+                    <button onClick={()=>exportPreloadedHTML(bgOptions,btnOptions,library)}
+                      style={{width:"100%",padding:"12px 0",borderRadius:8,border:"none",background:"linear-gradient(135deg,#00d4aa,#7028f5)",color:"#fff",fontSize:13,fontWeight:800,cursor:"pointer"}}>
+                      ⬇ Download Pre-loaded index.html
+                    </button>
+                    <p style={{fontSize:10,color:"#444",marginTop:8,textAlign:"center"}}>
+                      {bgOptions.length} background{bgOptions.length!==1?"s":""} · {btnOptions.length} button{btnOptions.length!==1?"s":""} · {library.length} creator{library.length!==1?"s":""}
+                    </p>
+                  </div>
+                )}
               </div>
             )}
 

@@ -266,6 +266,25 @@ function App(){
     });
   };
 
+  const exportConfig=()=>{
+    const config={
+      version:1,
+      title:{
+        fontSize:titleSize,
+        strokeWidth:strokeW,
+        letterSpacing:letterSp,
+        lineHeight:lineH,
+        verticalOffset:titleY,
+        strokeColor:strokeCol,
+        fillColor:fillCol,
+      }
+    };
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(new Blob([JSON.stringify(config,null,2)],{type:"application/json"}));
+    a.download="thumbnail-config.json";
+    document.body.appendChild(a);a.click();document.body.removeChild(a);
+  };
+
   const exportPreloaded=()=>{
     const src=document.documentElement.outerHTML;
     const bgJ=JSON.stringify(JSON.stringify(bgList));

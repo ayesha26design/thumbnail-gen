@@ -12,7 +12,6 @@
   <body>
     <div id="root"></div>
 
-    <!-- React + Babel -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
@@ -20,28 +19,16 @@
     <script type="text/babel" data-presets="react">
       const { useState, useRef, useCallback, useEffect } = React;
 
-      // ── Setup access — only via ?setup=true in URL ───────────────
-      const IS_ADMIN = new URLSearchParams(window.location.search).get("setup") === "true";
+      // ── CHANGE THIS PASSWORD ──────────────────────────────────────
+      const SETUP_PASSWORD = "admin2611";
+      // ─────────────────────────────────────────────────────────────
 
-      // ── Storage shim (localStorage) ──────────────────────────────
       window.storage = {
-        get: (key) => {
-          try {
-            const v = localStorage.getItem(key);
-            return Promise.resolve(v ? { value: v } : null);
-          } catch { return Promise.resolve(null); }
-        },
-        set: (key, value) => {
-          try { localStorage.setItem(key, value); } catch {}
-          return Promise.resolve({ key, value });
-        },
-        delete: (key) => {
-          try { localStorage.removeItem(key); } catch {}
-          return Promise.resolve({ key, deleted: true });
-        },
+        get: k => { try { const v=localStorage.getItem(k); return Promise.resolve(v?{value:v}:null); } catch { return Promise.resolve(null); } },
+        set: (k,v) => { try { localStorage.setItem(k,v); } catch {} return Promise.resolve({key:k,value:v}); },
+        delete: k => { try { localStorage.removeItem(k); } catch {} return Promise.resolve({key:k,deleted:true}); },
       };
 
-      // ── Flag CDN ─────────────────────────────────────────────────
       const FLAG_CDN = "https://cdnjs.cloudflare.com/ajax/libs/flag-icons/7.5.0/flags/4x3/";
       const CF = [
         {name:"Afghanistan",code:"af"},{name:"Argentina",code:"ar"},{name:"Australia",code:"au"},
@@ -65,232 +52,172 @@
         {name:"Sweden",code:"se"},{name:"Switzerland",code:"ch"},{name:"Thailand",code:"th"},
         {name:"Trinidad and Tobago",code:"tt"},{name:"Turkey",code:"tr"},{name:"UAE",code:"ae"},
         {name:"Uganda",code:"ug"},{name:"Ukraine",code:"ua"},{name:"USA",code:"us"},
-        {name:"Vietnam",code:"vn"},{name:"Wales",code:"gb-wls"},
-        {name:"Zambia",code:"zm"},{name:"Zimbabwe",code:"zw"},
+        {name:"Vietnam",code:"vn"},{name:"Wales",code:"gb-wls"},{name:"Zambia",code:"zm"},{name:"Zimbabwe",code:"zw"},
       ];
       const flagUrl = c => FLAG_CDN + c + ".svg";
 
-      // ── Layout ───────────────────────────────────────────────────
       const P = {
-        frame:       { w: 360, h: 454 },
-        creatorMask: { x: -1, y: 18, w: 361, h: 290 },
-        title:       { cx: 177, y: 258, w: 274, h: 72 },
-        flag:        { cx: 179.19, y: 334.68, w: 35.9, h: 20.04 },
-        button:      { x: 33, y: 363, w: 294, h: 48 },
+        frame:       { w:360, h:454 },
+        creatorMask: { x:-1, y:18, w:361, h:290 },
+        title:       { cx:177, y:258, w:274, h:72 },
+        flag:        { cx:179.19, y:334.68, w:35.9, h:20.04 },
+        button:      { x:33, y:363, w:294, h:48 },
       };
       const PREVIEW_W = 280;
       const PREVIEW_H = Math.round(PREVIEW_W * (P.frame.h / P.frame.w));
       const PREVIEW_S = PREVIEW_W / P.frame.w;
 
-      // ── Helpers ──────────────────────────────────────────────────
-      function rdFile(e) {
-        return new Promise(r => {
-          const f = e.target.files && e.target.files[0];
-          if (!f) return r(null);
-          const rd = new FileReader();
-          rd.onload = ev => r(ev.target.result);
-          rd.readAsDataURL(f);
-        });
-      }
-      function ldImg(s) {
-        return new Promise(r => {
-          if (!s) return r(null);
-          const i = new Image();
-          i.crossOrigin = "anonymous";
-          i.onload = () => r(i);
-          i.onerror = () => r(null);
-          i.src = s;
-        });
-      }
-      function ldFlagImg(src) {
-        if (!src) return Promise.resolve(null);
-        if (src.startsWith("data:")) return ldImg(src);
-        return fetch(src).then(r => r.text())
-          .then(svg => ldImg("data:image/svg+xml," + encodeURIComponent(svg)))
-          .catch(() => ldImg(src));
-      }
+      function rdFile(e){return new Promise(r=>{const f=e.target.files&&e.target.files[0];if(!f)return r(null);const rd=new FileReader();rd.onload=ev=>r(ev.target.result);rd.readAsDataURL(f);});}
+      function ldImg(s){return new Promise(r=>{if(!s)return r(null);const i=new Image();i.crossOrigin="anonymous";i.onload=()=>r(i);i.onerror=()=>r(null);i.src=s;});}
+      function ldFlagImg(src){if(!src)return Promise.resolve(null);if(src.startsWith("data:"))return ldImg(src);return fetch(src).then(r=>r.text()).then(svg=>ldImg("data:image/svg+xml,"+encodeURIComponent(svg))).catch(()=>ldImg(src));}
 
-      // ── Shared styles ────────────────────────────────────────────
-      const lbl = { fontSize:11, color:"#666", fontWeight:600, marginBottom:3, display:"block" };
-      const inp = { width:"100%", padding:"8px 10px", borderRadius:7, border:"1px solid #2a2a2a", background:"#111", color:"#fff", fontSize:13, fontWeight:700, boxSizing:"border-box", textTransform:"uppercase", outline:"none" };
+      const lbl={fontSize:11,color:"#666",fontWeight:600,marginBottom:3,display:"block"};
+      const inp={width:"100%",padding:"8px 10px",borderRadius:7,border:"1px solid #2a2a2a",background:"#111",color:"#fff",fontSize:13,fontWeight:700,boxSizing:"border-box",textTransform:"uppercase",outline:"none"};
 
-      // ── SliderRow ────────────────────────────────────────────────
-      function SliderRow({ label, value, min, max, unit, onChange }) {
-        return (
+      function SliderRow({label,value,min,max,unit,onChange}){
+        return(
           <div>
-            <div style={{ display:"flex", justifyContent:"space-between", marginBottom:2 }}>
-              <span style={{ fontSize:10, color:"#555" }}>{label}</span>
-              <span style={{ fontSize:10, color:"#00d4aa" }}>{value}{unit||""}</span>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:2}}>
+              <span style={{fontSize:10,color:"#555"}}>{label}</span>
+              <span style={{fontSize:10,color:"#00d4aa"}}>{value}{unit||""}</span>
             </div>
-            <input type="range" min={min} max={max} value={value}
-              onChange={e => onChange(+e.target.value)}
-              style={{ width:"100%", accentColor:"#00d4aa" }}/>
+            <input type="range" min={min} max={max} value={value} onChange={e=>onChange(+e.target.value)} style={{width:"100%",accentColor:"#00d4aa"}}/>
           </div>
         );
       }
 
-      // ── ColorPicker ──────────────────────────────────────────────
-      function ColorPicker({ value, onChange, label }) {
-        const [open, setOpen] = useState(false);
-        const [hex, setHex] = useState((value||"#000000").replace("#",""));
-        const [hue, setHue] = useState(0);
-        const [sat, setSat] = useState(100);
-        const [bri, setBri] = useState(50);
-        const specRef = useRef(null);
-        const dragRef = useRef(false);
-
-        function hsbToHex(h,s,b) {
-          s/=100; b/=100;
-          const k = n => (n+h/60)%6;
-          const f = n => b*(1-s*Math.max(0,Math.min(k(n),4-k(n),1)));
-          const r=Math.round(f(5)*255), g=Math.round(f(3)*255), bl=Math.round(f(1)*255);
-          return "#"+[r,g,bl].map(x=>x.toString(16).padStart(2,"0")).join("");
-        }
-        function hexToHsb(h) {
-          let c=(h||"").replace("#","");
-          if(c.length===3) c=c.split("").map(x=>x+x).join("");
-          if(c.length!==6) return [0,100,50];
-          const r=parseInt(c.slice(0,2),16)/255, g=parseInt(c.slice(2,4),16)/255, b=parseInt(c.slice(4,6),16)/255;
-          const max=Math.max(r,g,b), min=Math.min(r,g,b), d=max-min;
-          let hv=0; const sv=max===0?0:d/max, v=max;
-          if(d!==0){if(max===r)hv=(g-b)/d%6;else if(max===g)hv=(b-r)/d+2;else hv=(r-g)/d+4;hv=Math.round(hv*60);if(hv<0)hv+=360;}
-          return [hv, Math.round(sv*100), Math.round(v*100)];
-        }
-
-        useEffect(()=>{
-          if(!value) return;
-          const [h,s,b]=hexToHsb(value); setHue(h); setSat(s); setBri(b); setHex(value.replace("#",""));
-        },[value]);
-
-        const applyHsb = (h,s,b) => { const col=hsbToHex(h,s,b); setHex(col.replace("#","")); onChange(col); };
-        const handleSpec = e => {
-          if(!specRef.current) return;
-          const rc=specRef.current.getBoundingClientRect();
-          const cx=e.touches?e.touches[0].clientX:e.clientX;
-          const cy=e.touches?e.touches[0].clientY:e.clientY;
-          const s=Math.max(0,Math.min(100,((cx-rc.left)/rc.width)*100));
-          const b=Math.max(0,Math.min(100,100-((cy-rc.top)/rc.height)*100));
-          setSat(Math.round(s)); setBri(Math.round(b)); applyHsb(hue,Math.round(s),Math.round(b));
-        };
-        const swatches=["#FFFFFF","#000000","#FF0000","#FF6B00","#FFD700","#00FF00","#00D4AA","#0099FF","#013CFE","#8B00FF","#FF00FF","#FF0080","#888888"];
-
-        return (
-          <div style={{ position:"relative" }}>
-            {label && <label style={lbl}>{label}</label>}
-            <div onClick={()=>setOpen(!open)} style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 8px", borderRadius:7, border:"1px solid #2a2a2a", background:"#111", cursor:"pointer" }}>
-              <div style={{ width:20, height:20, borderRadius:4, background:value||"#000", border:"1px solid #444", flexShrink:0 }}/>
-              <span style={{ fontSize:11, color:"#aaa", fontFamily:"monospace", flex:1 }}>{"#"+(hex||"").toUpperCase()}</span>
-              <span style={{ fontSize:9, color:"#444" }}>{open?"▲":"▼"}</span>
+      function ColorPicker({value,onChange,label}){
+        const [open,setOpen]=useState(false);
+        const [hex,setHex]=useState((value||"#000000").replace("#",""));
+        const [hue,setHue]=useState(0);
+        const [sat,setSat]=useState(100);
+        const [bri,setBri]=useState(50);
+        const specRef=useRef(null);
+        const dragRef=useRef(false);
+        function hsbToHex(h,s,b){s/=100;b/=100;const k=n=>(n+h/60)%6;const f=n=>b*(1-s*Math.max(0,Math.min(k(n),4-k(n),1)));const r=Math.round(f(5)*255),g=Math.round(f(3)*255),bl=Math.round(f(1)*255);return"#"+[r,g,bl].map(x=>x.toString(16).padStart(2,"0")).join("");}
+        function hexToHsb(h){let c=(h||"").replace("#","");if(c.length===3)c=c.split("").map(x=>x+x).join("");if(c.length!==6)return[0,100,50];const r=parseInt(c.slice(0,2),16)/255,g=parseInt(c.slice(2,4),16)/255,b=parseInt(c.slice(4,6),16)/255;const max=Math.max(r,g,b),min=Math.min(r,g,b),d=max-min;let hv=0;const sv=max===0?0:d/max,v=max;if(d!==0){if(max===r)hv=(g-b)/d%6;else if(max===g)hv=(b-r)/d+2;else hv=(r-g)/d+4;hv=Math.round(hv*60);if(hv<0)hv+=360;}return[hv,Math.round(sv*100),Math.round(v*100)];}
+        useEffect(()=>{if(!value)return;const[h,s,b]=hexToHsb(value);setHue(h);setSat(s);setBri(b);setHex(value.replace("#",""));},[value]);
+        const applyHsb=(h,s,b)=>{const col=hsbToHex(h,s,b);setHex(col.replace("#",""));onChange(col);};
+        const handleSpec=e=>{if(!specRef.current)return;const rc=specRef.current.getBoundingClientRect();const cx=e.touches?e.touches[0].clientX:e.clientX;const cy=e.touches?e.touches[0].clientY:e.clientY;const s=Math.max(0,Math.min(100,((cx-rc.left)/rc.width)*100));const b=Math.max(0,Math.min(100,100-((cy-rc.top)/rc.height)*100));setSat(Math.round(s));setBri(Math.round(b));applyHsb(hue,Math.round(s),Math.round(b));};
+        const sw=["#FFFFFF","#000000","#FF0000","#FF6B00","#FFD700","#00FF00","#00D4AA","#0099FF","#013CFE","#8B00FF","#FF00FF","#FF0080","#888888"];
+        return(
+          <div style={{position:"relative"}}>
+            {label&&<label style={lbl}>{label}</label>}
+            <div onClick={()=>setOpen(!open)} style={{display:"flex",alignItems:"center",gap:6,padding:"6px 8px",borderRadius:7,border:"1px solid #2a2a2a",background:"#111",cursor:"pointer"}}>
+              <div style={{width:20,height:20,borderRadius:4,background:value||"#000",border:"1px solid #444",flexShrink:0}}/>
+              <span style={{fontSize:11,color:"#aaa",fontFamily:"monospace",flex:1}}>{"#"+(hex||"").toUpperCase()}</span>
+              <span style={{fontSize:9,color:"#444"}}>{open?"▲":"▼"}</span>
             </div>
-            {open && (
-              <div style={{ position:"absolute", top:"100%", left:0, right:0, zIndex:300, background:"#181818", border:"1px solid #333", borderRadius:10, padding:10, marginTop:4, boxShadow:"0 8px 32px rgba(0,0,0,0.8)" }}>
-                <div ref={specRef}
-                  style={{ width:"100%", height:120, borderRadius:6, background:`linear-gradient(to bottom,transparent,#000),linear-gradient(to right,#fff,hsl(${hue},100%,50%))`, position:"relative", cursor:"crosshair", marginBottom:8, touchAction:"none" }}
-                  onMouseDown={e=>{dragRef.current=true;handleSpec(e);}}
-                  onMouseMove={e=>{if(dragRef.current)handleSpec(e);}}
-                  onMouseUp={()=>{dragRef.current=false;}}
-                  onMouseLeave={()=>{dragRef.current=false;}}
-                  onTouchStart={e=>{dragRef.current=true;handleSpec(e);}}
-                  onTouchMove={e=>{if(dragRef.current)handleSpec(e);}}
-                  onTouchEnd={()=>{dragRef.current=false;}}
-                >
-                  <div style={{ position:"absolute", transform:"translate(-50%,-50%)", left:sat+"%", top:(100-bri)+"%", width:12, height:12, borderRadius:6, border:"2px solid #fff", boxShadow:"0 0 0 1px #000", pointerEvents:"none" }}/>
+            {open&&(
+              <div style={{position:"absolute",top:"100%",left:0,right:0,zIndex:300,background:"#181818",border:"1px solid #333",borderRadius:10,padding:10,marginTop:4,boxShadow:"0 8px 32px rgba(0,0,0,0.8)"}}>
+                <div ref={specRef} style={{width:"100%",height:120,borderRadius:6,background:`linear-gradient(to bottom,transparent,#000),linear-gradient(to right,#fff,hsl(${hue},100%,50%))`,position:"relative",cursor:"crosshair",marginBottom:8,touchAction:"none"}}
+                  onMouseDown={e=>{dragRef.current=true;handleSpec(e);}} onMouseMove={e=>{if(dragRef.current)handleSpec(e);}} onMouseUp={()=>{dragRef.current=false;}} onMouseLeave={()=>{dragRef.current=false;}}
+                  onTouchStart={e=>{dragRef.current=true;handleSpec(e);}} onTouchMove={e=>{if(dragRef.current)handleSpec(e);}} onTouchEnd={()=>{dragRef.current=false;}}>
+                  <div style={{position:"absolute",transform:"translate(-50%,-50%)",left:sat+"%",top:(100-bri)+"%",width:12,height:12,borderRadius:6,border:"2px solid #fff",boxShadow:"0 0 0 1px #000",pointerEvents:"none"}}/>
                 </div>
-                <div style={{ position:"relative", height:12, borderRadius:6, background:"linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)", marginBottom:8 }}>
-                  <input type="range" min={0} max={360} value={hue} onChange={e=>{const h=+e.target.value;setHue(h);applyHsb(h,sat,bri);}} style={{ position:"absolute", inset:0, width:"100%", opacity:0, cursor:"pointer", height:"100%", margin:0 }}/>
-                  <div style={{ position:"absolute", top:"50%", transform:"translate(-50%,-50%)", left:(hue/360*100)+"%", width:12, height:12, borderRadius:6, background:`hsl(${hue},100%,50%)`, border:"2px solid #fff", boxShadow:"0 0 0 1px #000", pointerEvents:"none" }}/>
+                <div style={{position:"relative",height:12,borderRadius:6,background:"linear-gradient(to right,#f00,#ff0,#0f0,#0ff,#00f,#f0f,#f00)",marginBottom:8}}>
+                  <input type="range" min={0} max={360} value={hue} onChange={e=>{const h=+e.target.value;setHue(h);applyHsb(h,sat,bri);}} style={{position:"absolute",inset:0,width:"100%",opacity:0,cursor:"pointer",height:"100%",margin:0}}/>
+                  <div style={{position:"absolute",top:"50%",transform:"translate(-50%,-50%)",left:(hue/360*100)+"%",width:12,height:12,borderRadius:6,background:`hsl(${hue},100%,50%)`,border:"2px solid #fff",boxShadow:"0 0 0 1px #000",pointerEvents:"none"}}/>
                 </div>
-                <div style={{ display:"flex", gap:6, alignItems:"center", marginBottom:8 }}>
-                  <div style={{ width:28, height:28, borderRadius:5, background:value||"#000", border:"1px solid #444", flexShrink:0 }}/>
-                  <div style={{ flex:1, position:"relative" }}>
-                    <span style={{ position:"absolute", left:8, top:"50%", transform:"translateY(-50%)", color:"#555", fontSize:12, fontFamily:"monospace" }}>#</span>
-                    <input value={(hex||"").toUpperCase()} onChange={e=>{const v=e.target.value.replace(/[^0-9a-fA-F]/g,"").slice(0,6);setHex(v);if(v.length===6){const col="#"+v;onChange(col);const[h,s,b]=hexToHsb(col);setHue(h);setSat(s);setBri(b);}}}
-                      style={{ width:"100%", paddingLeft:20, paddingRight:6, paddingTop:5, paddingBottom:5, borderRadius:5, border:"1px solid #333", background:"#0a0a0a", color:"#fff", fontSize:12, fontFamily:"monospace", boxSizing:"border-box", outline:"none" }}/>
+                <div style={{display:"flex",gap:6,alignItems:"center",marginBottom:8}}>
+                  <div style={{width:28,height:28,borderRadius:5,background:value||"#000",border:"1px solid #444",flexShrink:0}}/>
+                  <div style={{flex:1,position:"relative"}}>
+                    <span style={{position:"absolute",left:8,top:"50%",transform:"translateY(-50%)",color:"#555",fontSize:12,fontFamily:"monospace"}}>#</span>
+                    <input value={(hex||"").toUpperCase()} onChange={e=>{const v=e.target.value.replace(/[^0-9a-fA-F]/g,"").slice(0,6);setHex(v);if(v.length===6){const col="#"+v;onChange(col);const[h,s,b]=hexToHsb(col);setHue(h);setSat(s);setBri(b);}}} style={{width:"100%",paddingLeft:20,paddingRight:6,paddingTop:5,paddingBottom:5,borderRadius:5,border:"1px solid #333",background:"#0a0a0a",color:"#fff",fontSize:12,fontFamily:"monospace",boxSizing:"border-box",outline:"none"}}/>
                   </div>
                 </div>
-                <div style={{ display:"flex", gap:4, flexWrap:"wrap", marginBottom:8 }}>
-                  {swatches.map(c=>(
-                    <div key={c} onClick={()=>{onChange(c);const[h,s,b]=hexToHsb(c);setHue(h);setSat(s);setBri(b);setHex(c.replace("#",""));}}
-                      style={{ width:20, height:20, borderRadius:3, background:c, cursor:"pointer", border:value===c?"2px solid #00d4aa":"1px solid #444" }}/>
-                  ))}
-                </div>
-                <button onClick={()=>setOpen(false)} style={{ width:"100%", padding:"5px 0", borderRadius:5, border:"none", background:"#00d4aa", color:"#000", fontWeight:700, fontSize:11, cursor:"pointer" }}>Done</button>
+                <div style={{display:"flex",gap:4,flexWrap:"wrap",marginBottom:8}}>{sw.map(c=><div key={c} onClick={()=>{onChange(c);const[h,s,b]=hexToHsb(c);setHue(h);setSat(s);setBri(b);setHex(c.replace("#",""));}} style={{width:20,height:20,borderRadius:3,background:c,cursor:"pointer",border:value===c?"2px solid #00d4aa":"1px solid #444"}}/>)}</div>
+                <button onClick={()=>setOpen(false)} style={{width:"100%",padding:"5px 0",borderRadius:5,border:"none",background:"#00d4aa",color:"#000",fontWeight:700,fontSize:11,cursor:"pointer"}}>Done</button>
               </div>
             )}
           </div>
         );
       }
 
-      // ── Section ──────────────────────────────────────────────────
-      function Section({ title, icon, id, open, onToggle, children }) {
-        return (
-          <div style={{ borderBottom:"1px solid #1a1a1a" }}>
-            <div onClick={()=>onToggle(id)} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"9px 12px", cursor:"pointer", background:open?"#111":"transparent" }}>
-              <span style={{ fontSize:11, fontWeight:700, color:open?"#00d4aa":"#777" }}>{icon} {title}</span>
-              <span style={{ fontSize:9, color:"#444" }}>{open?"▲":"▼"}</span>
+      function Section({title,icon,id,open,onToggle,children}){
+        return(
+          <div style={{borderBottom:"1px solid #1a1a1a"}}>
+            <div onClick={()=>onToggle(id)} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"9px 12px",cursor:"pointer",background:open?"#111":"transparent"}}>
+              <span style={{fontSize:11,fontWeight:700,color:open?"#00d4aa":"#777"}}>{icon} {title}</span>
+              <span style={{fontSize:9,color:"#444"}}>{open?"▲":"▼"}</span>
             </div>
-            {open && <div style={{ padding:"10px 12px", display:"flex", flexDirection:"column", gap:9 }}>{children}</div>}
+            {open&&<div style={{padding:"10px 12px",display:"flex",flexDirection:"column",gap:9}}>{children}</div>}
           </div>
         );
       }
 
-      // ── App ──────────────────────────────────────────────────────
-      function App() {
+      function PasswordModal({onSuccess,onCancel}){
+        const [pw,setPw]=useState("");
+        const [err,setErr]=useState(false);
+        const submit=()=>{if(pw===SETUP_PASSWORD){onSuccess();}else{setErr(true);setPw("");}};
+        return(
+          <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.85)",zIndex:1000,display:"flex",alignItems:"center",justifyContent:"center"}}>
+            <div style={{background:"#141414",border:"1px solid #2a2a2a",borderRadius:14,padding:28,width:300,display:"flex",flexDirection:"column",gap:14}}>
+              <div style={{textAlign:"center"}}>
+                <div style={{fontSize:28,marginBottom:6}}>🔒</div>
+                <div style={{fontSize:15,fontWeight:800,color:"#fff"}}>Setup Mode</div>
+                <div style={{fontSize:12,color:"#555",marginTop:3}}>Enter the admin password</div>
+              </div>
+              <input type="password" value={pw} onChange={e=>{setPw(e.target.value);setErr(false);}} onKeyDown={e=>e.key==="Enter"&&submit()} placeholder="Password" autoFocus
+                style={{padding:"10px 12px",borderRadius:8,border:err?"1px solid #f44":"1px solid #2a2a2a",background:"#0a0a0a",color:"#fff",fontSize:14,outline:"none",textAlign:"center",letterSpacing:3}}/>
+              {err&&<p style={{color:"#f44",fontSize:11,textAlign:"center",margin:"-8px 0 0"}}>Incorrect password</p>}
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={onCancel} style={{flex:1,padding:"9px 0",borderRadius:8,border:"1px solid #222",background:"transparent",color:"#555",fontSize:13,cursor:"pointer"}}>Cancel</button>
+                <button onClick={submit} style={{flex:2,padding:"9px 0",borderRadius:8,border:"none",background:"linear-gradient(135deg,#00d4aa,#7028f5)",color:"#fff",fontSize:13,fontWeight:700,cursor:"pointer"}}>Unlock</button>
+              </div>
+            </div>
+          </div>
+        );
+      }
+
+      function App(){
+        const [activeTab,setActiveTab]=useState("generator");
+        const [showPwModal,setShowPwModal]=useState(false);
+        const [isAdminUnlocked,setAdminUnlocked]=useState(false);
+        const handleTabClick=tab=>{if(tab==="generator"){setActiveTab("generator");}else{if(isAdminUnlocked){setActiveTab("setup");}else{setShowPwModal(true);}}};
+        const onPwSuccess=()=>{setShowPwModal(false);setAdminUnlocked(true);setActiveTab("setup");};
+
         const [line1,sL1]=useState("GRACE HAYDEN");
         const [line2,sL2]=useState("");
         const [secondaryText,sSecT]=useState("");
         const [strokeColor,sStroke]=useState("#013CFE");
-        const [creatorSrc,sCS]=useState(null);
-        const [imgX,sIX]=useState(0), [imgY,sIY]=useState(0), [imgZoom,sIZ]=useState(100);
-
+        const [titleColor,setTC]=useState("#FFFFFF");
         const [titleFontSize,setTFS]=useState(40);
+        const [titleStrokeWidth,setTSW]=useState(6);
         const [titleLetterSpacing,setTLS]=useState(0);
         const [titleLineHeight,setTLH]=useState(91);
         const [titleYOffset,setTYO]=useState(0);
-        const [titleColor,setTC]=useState("#FFFFFF");
-        const [titleStrokeWidth,setTSW]=useState(6);
-
         const [secFontSize,setSFS]=useState(16);
         const [secLetterSpacing,setSLS]=useState(0);
         const [secColor,setSC]=useState("#FFFFFF");
         const [secYOffset,setSYO]=useState(0);
         const [secXOffset,setSXO]=useState(0);
-
-        const [flagSrc,sFS]=useState(null), [flagLabel,sFL]=useState(""), [flagSearch,sFSr]=useState("");
-        const [flagOpen,sFO]=useState(false), [showFlag,sSF]=useState(false);
-
-        const [bgSrc,sBg]=useState(null), [bgOptions,sBgO]=useState([]);
-        const [btnSrc,sBtn]=useState(null), [btnOptions,sBtnO]=useState([]);
-
+        const [creatorSrc,sCS]=useState(null);
+        const [imgX,sIX]=useState(0),[imgY,sIY]=useState(0),[imgZoom,sIZ]=useState(100);
+        const [flagSrc,sFS]=useState(null),[flagLabel,sFL]=useState(""),[flagSearch,sFSr]=useState("");
+        const [flagOpen,sFO]=useState(false),[showFlag,sSF]=useState(false);
+        const [bgSrc,sBg]=useState(null),[bgOptions,sBgO]=useState([]);
+        const [btnSrc,sBtn]=useState(null),[btnOptions,sBtnO]=useState([]);
         const [library,sLib]=useState([]);
-        const [libOpen,sLO]=useState(false);
         const [libLoading,sLL]=useState(true);
         const [libSearch,sLS]=useState("");
-
-        const [fontName,sFN]=useState("TrimBold");
         const [fontLoaded,sFL2]=useState(false);
-        const [secFontName,sSecFN]=useState("Arial");
         const [secFontLoaded,sSecFL]=useState(false);
-
-        const [setupDone,sSD]=useState(()=>{
-          // Non-admin always skips setup (uses saved layers)
-          if(!IS_ADMIN) return true;
-          // Admin starts in setup if no bg saved
-                        try { return !!localStorage.getItem("bg-library") && !!localStorage.getItem("btn-library"); } catch { return false; }
-        });
+        const fontNameRef=useRef("Impact");
+        const secFontNameRef=useRef("Arial");
         const [exporting,sEx]=useState(false);
         const [expMsg,sEM]=useState("");
         const [exportScale,sES]=useState(2);
         const [exportFormat,sEF]=useState("png");
         const [jpegQuality,sJQ]=useState(0.8);
-        const [openSection,setOS]=useState("title");
+        const [openSection,setOS]=useState("creator");
+        const toggleSection=id=>setOS(p=>p===id?null:id);
 
-        const toggleSection = id => setOS(p => p===id ? null : id);
+        const canvasRef=useRef(null),bgRef=useRef(null),btnRef=useRef(null);
+        const flRef=useRef(null),crLibRef=useRef(null),fontRef=useRef(null),secFontRef=useRef(null);
 
-        const canvasRef=useRef(null), crRef=useRef(null), bgRef=useRef(null), btnRef=useRef(null);
-        const fontRef=useRef(null), secFontRef=useRef(null), flRef=useRef(null), libRef=useRef(null), bgLibRef=useRef(null);
-
-        const allReady = !!(bgSrc && (btnSrc || btnOptions.length > 0));
+        const allReady=!!(bgSrc&&(btnSrc||btnOptions.length>0));
+        const filteredLib=library.filter(x=>x.name.toLowerCase().includes(libSearch.toLowerCase()));
 
         useEffect(()=>{
           (async()=>{
@@ -304,250 +231,171 @@
         useEffect(()=>{if(libLoading)return;window.storage.set("bg-library",JSON.stringify(bgOptions)).catch(()=>{});},[bgOptions,libLoading]);
         useEffect(()=>{if(libLoading)return;window.storage.set("btn-library",JSON.stringify(btnOptions)).catch(()=>{});},[btnOptions,libLoading]);
 
-        const handleFont = e => { const f=e.target.files&&e.target.files[0]; if(!f)return; f.arrayBuffer().then(b=>{const fc=new FontFace("TrimBold",b);return fc.load();}).then(fc=>{document.fonts.add(fc);sFN("TrimBold");sFL2(true);}).catch(()=>{}); };
-        const handleSecFont = e => { const f=e.target.files&&e.target.files[0]; if(!f)return; f.arrayBuffer().then(b=>{const fc=new FontFace("SecondaryFont",b);return fc.load();}).then(fc=>{document.fonts.add(fc);sSecFN("SecondaryFont");sSecFL(true);}).catch(()=>{}); };
-        const selectLib = it => { sCS(it.src); sIX(0); sIY(0); sIZ(100); sLO(false); };
-        const removeLib = id => sLib(p=>p.filter(x=>x.id!==id));
-        const removeBgLib = id => sBgO(p=>p.filter(x=>x.id!==id));
+        const handleFont=e=>{const f=e.target.files&&e.target.files[0];if(!f)return;f.arrayBuffer().then(b=>{const fc=new FontFace("TrimBold",b);return fc.load();}).then(fc=>{document.fonts.add(fc);fontNameRef.current="TrimBold";sFL2(true);}).catch(()=>{});};
+        const handleSecFont=e=>{const f=e.target.files&&e.target.files[0];if(!f)return;f.arrayBuffer().then(b=>{const fc=new FontFace("SecondaryFont",b);return fc.load();}).then(fc=>{document.fonts.add(fc);secFontNameRef.current="SecondaryFont";sSecFL(true);}).catch(()=>{});};
 
-        const draw = useCallback((canvas, scale) => {
-          if(!canvas||!allReady) return Promise.resolve();
-          const s=scale||1, W=P.frame.w*s, H=P.frame.h*s;
-          canvas.width=W; canvas.height=H;
-          const ctx=canvas.getContext("2d"); ctx.clearRect(0,0,W,H);
+        const draw=useCallback((canvas,scale)=>{
+          if(!canvas||!allReady)return Promise.resolve();
+          const s=scale||1,W=P.frame.w*s,H=P.frame.h*s;
+          canvas.width=W;canvas.height=H;
+          const ctx=canvas.getContext("2d");ctx.clearRect(0,0,W,H);
           const activeBtnSrc=btnSrc||(btnOptions[0]&&btnOptions[0].src)||null;
+          const fn=fontNameRef.current;
+          const sfn=secFontNameRef.current;
           return Promise.all([ldImg(bgSrc),ldImg(creatorSrc),ldImg(activeBtnSrc),ldFlagImg(flagSrc)]).then(imgs=>{
-            const [bg,cr,btn,fl]=imgs;
-            if(bg) ctx.drawImage(bg,0,0,W,H);
+            const[bg,cr,btn,fl]=imgs;
+            if(bg)ctx.drawImage(bg,0,0,W,H);
             if(cr){
-              ctx.save(); ctx.beginPath();
-              ctx.rect(P.creatorMask.x*s,P.creatorMask.y*s,P.creatorMask.w*s,P.creatorMask.h*s); ctx.clip();
+              ctx.save();ctx.beginPath();ctx.rect(P.creatorMask.x*s,P.creatorMask.y*s,P.creatorMask.w*s,P.creatorMask.h*s);ctx.clip();
               const iw=cr.width,ih=cr.height,tw=P.creatorMask.w*s,th=P.creatorMask.h*s;
               const zf=imgZoom/100,sc=Math.max(tw/iw,th/ih)*zf,dw=iw*sc,dh=ih*sc;
               ctx.drawImage(cr,P.creatorMask.x*s+(tw-dw)/2+(imgX*s),P.creatorMask.y*s+(th-dh)/2+(imgY*s),dw,dh);
               ctx.restore();
             }
-            ctx.textAlign="center"; ctx.textBaseline="top";
+            ctx.textAlign="center";ctx.textBaseline="top";
             const lines=[line1,line2].filter(l=>l.trim());
             let fs0=titleFontSize*s;
-            const lhF=titleLineHeight/100, totH=lines.length*fs0*lhF, cx=P.title.cx*s;
+            const lhF=titleLineHeight/100,totH=lines.length*fs0*lhF,cx=P.title.cx*s;
             let sy=(P.title.y+titleYOffset)*s+((P.title.h*s-totH)/2);
             ctx.letterSpacing=(titleLetterSpacing*s)+"px";
             lines.forEach(l=>{
-              let t=l.toUpperCase(), fs=fs0;
-              ctx.font=`900 ${fs}px ${fontName}, Impact, Arial Black, sans-serif`;
-              const tw2=ctx.measureText(t).width, mw=P.title.w*s;
-              if(tw2>mw){fs=fs*(mw/tw2); ctx.font=`900 ${fs}px ${fontName}, Impact, Arial Black, sans-serif`;}
-              ctx.strokeStyle=strokeColor; ctx.lineWidth=titleStrokeWidth*s; ctx.lineJoin="round"; ctx.miterLimit=2;
-              ctx.strokeText(t,cx,sy); ctx.fillStyle=titleColor; ctx.fillText(t,cx,sy);
+              let t=l.toUpperCase(),fs=fs0;
+              ctx.font=`900 ${fs}px ${fn}, Impact, Arial Black, sans-serif`;
+              const tw2=ctx.measureText(t).width,mw=P.title.w*s;
+              if(tw2>mw){fs=fs*(mw/tw2);ctx.font=`900 ${fs}px ${fn}, Impact, Arial Black, sans-serif`;}
+              ctx.strokeStyle=strokeColor;ctx.lineWidth=titleStrokeWidth*s;ctx.lineJoin="round";ctx.miterLimit=2;
+              ctx.strokeText(t,cx,sy);ctx.fillStyle=titleColor;ctx.fillText(t,cx,sy);
               sy+=fs*lhF;
             });
             ctx.letterSpacing="0px";
             if(showFlag&&fl){
               const fw=P.flag.w*s,fh=P.flag.h*s,fx=P.flag.cx*s-fw/2,fy=P.flag.y*s,sw2=1.5*s,r=3*s;
-              ctx.save(); ctx.fillStyle="#FFF"; ctx.beginPath();
+              ctx.save();ctx.fillStyle="#FFF";ctx.beginPath();
               const bx=fx-sw2,by=fy-sw2,bw=fw+sw2*2,bh=fh+sw2*2,br=r+sw2;
               ctx.moveTo(bx+br,by);ctx.lineTo(bx+bw-br,by);ctx.quadraticCurveTo(bx+bw,by,bx+bw,by+br);ctx.lineTo(bx+bw,by+bh-br);ctx.quadraticCurveTo(bx+bw,by+bh,bx+bw-br,by+bh);ctx.lineTo(bx+br,by+bh);ctx.quadraticCurveTo(bx,by+bh,bx,by+bh-br);ctx.lineTo(bx,by+br);ctx.quadraticCurveTo(bx,by,bx+br,by);ctx.closePath();ctx.fill();ctx.restore();
               ctx.save();ctx.beginPath();ctx.moveTo(fx+r,fy);ctx.lineTo(fx+fw-r,fy);ctx.quadraticCurveTo(fx+fw,fy,fx+fw,fy+r);ctx.lineTo(fx+fw,fy+fh-r);ctx.quadraticCurveTo(fx+fw,fy+fh,fx+fw-r,fy+fh);ctx.lineTo(fx+r,fy+fh);ctx.quadraticCurveTo(fx,fy+fh,fx,fy+fh-r);ctx.lineTo(fx,fy+r);ctx.quadraticCurveTo(fx,fy,fx+r,fy);ctx.closePath();ctx.clip();
               ctx.drawImage(fl,fx,fy,fw,fh);ctx.restore();
-            } else if(secondaryText.trim()){
-              ctx.font=`400 ${secFontSize*s}px ${secFontName}, Arial, sans-serif`;
-              ctx.textAlign="center"; ctx.textBaseline="top";
-              ctx.letterSpacing=(secLetterSpacing*s)+"px";
-              ctx.fillStyle=secColor;
-              ctx.fillText(secondaryText,(P.flag.cx+secXOffset)*s,(P.flag.y+secYOffset)*s);
-              ctx.letterSpacing="0px";
+            }else if(secondaryText.trim()){
+              ctx.font=`400 ${secFontSize*s}px ${sfn}, Arial, sans-serif`;
+              ctx.textAlign="center";ctx.textBaseline="top";ctx.letterSpacing=(secLetterSpacing*s)+"px";ctx.fillStyle=secColor;
+              ctx.fillText(secondaryText,(P.flag.cx+secXOffset)*s,(P.flag.y+secYOffset)*s);ctx.letterSpacing="0px";
             }
-            if(btn) ctx.drawImage(btn,P.button.x*s,P.button.y*s,P.button.w*s,P.button.h*s);
+            if(btn)ctx.drawImage(btn,P.button.x*s,P.button.y*s,P.button.w*s,P.button.h*s);
           });
-        },[bgSrc,creatorSrc,btnSrc,btnOptions,flagSrc,showFlag,line1,line2,secondaryText,strokeColor,fontName,secFontName,imgX,imgY,imgZoom,titleFontSize,titleLetterSpacing,titleLineHeight,titleYOffset,titleColor,titleStrokeWidth,secFontSize,secLetterSpacing,secColor,secYOffset,secXOffset,allReady]);
+        },[bgSrc,creatorSrc,btnSrc,btnOptions,flagSrc,showFlag,line1,line2,secondaryText,strokeColor,imgX,imgY,imgZoom,titleFontSize,titleLetterSpacing,titleLineHeight,titleYOffset,titleColor,titleStrokeWidth,secFontSize,secLetterSpacing,secColor,secYOffset,secXOffset,allReady,fontLoaded,secFontLoaded]);
 
-        useEffect(()=>{ if(canvasRef.current&&allReady) draw(canvasRef.current,PREVIEW_S); },[draw,allReady]);
+        useEffect(()=>{if(canvasRef.current&&allReady)draw(canvasRef.current,PREVIEW_S);},[draw,allReady]);
 
-        const doExport = () => {
-          sEx(true); sEM("");
+        const doExport=()=>{
+          sEx(true);sEM("");
           const c=document.createElement("canvas");
           draw(c,exportScale).then(()=>new Promise(r=>setTimeout(r,400))).then(()=>{
             try{
-              let mt=exportFormat==="jpeg"?"image/jpeg":"image/png", q=exportFormat==="jpeg"?jpegQuality:undefined;
+              let mt=exportFormat==="jpeg"?"image/jpeg":"image/png",q=exportFormat==="jpeg"?jpegQuality:undefined;
               let out=c;
               if(exportFormat==="jpeg"){const tc=document.createElement("canvas");tc.width=c.width;tc.height=c.height;const tx=tc.getContext("2d");tx.fillStyle="#000";tx.fillRect(0,0,tc.width,tc.height);tx.drawImage(c,0,0);out=tc;}
-              const du=out.toDataURL(mt,q), b64=du.split(",")[1], kb=Math.round(b64.length*3/4/1024);
+              const du=out.toDataURL(mt,q),b64=du.split(",")[1],kb=Math.round(b64.length*3/4/1024);
               const a=document.createElement("a");
               a.download=(line1+(line2?"_"+line2:"")+(exportFormat==="jpeg"?".jpg":".png")).replace(/\s+/g,"_");
-              a.href=du; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+              a.href=du;document.body.appendChild(a);a.click();document.body.removeChild(a);
               sEM("✓ "+out.width+"×"+out.height+" | "+kb+"KB");
             }catch(er){sEM("Export failed: "+er.message);}
             sEx(false);
           });
         };
 
-        const filteredLib = library.filter(x=>x.name.toLowerCase().includes(libSearch.toLowerCase()));
-
-        // Non-admin with no layers saved yet
-        if(!allReady && !IS_ADMIN) return (
-          <div style={{ minHeight:"100vh", background:"#0a0a0a", color:"#fff", fontFamily:"Arial,sans-serif", display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:12 }}>
-            <div style={{ fontSize:32 }}>⏳</div>
-            <p style={{ fontSize:16, fontWeight:700, color:"#fff" }}>Tool is being set up</p>
-            <p style={{ fontSize:13, color:"#555" }}>Check back shortly — the admin hasn't uploaded the layers yet.</p>
-          </div>
-        );
-
-        // Only show setup screen to admin
-        if(!setupDone && IS_ADMIN) return (
-          <div style={{ minHeight:"100vh", background:"#0a0a0a", color:"#fff", fontFamily:"Arial,sans-serif", display:"flex", alignItems:"center", justifyContent:"center" }}>
-            <div style={{ width:"100%", maxWidth:440, padding:"24px 20px" }}>
-              <h1 style={{ fontSize:20, fontWeight:800, margin:"0 0 4px" }}>Setup — Upload Layers</h1>
-              <p style={{ color:"#555", fontSize:12, margin:"0 0 20px" }}>One-time setup. Saved for next session.</p>
-
-              {[
-                { ref:bgRef, label:"1. Background Gradients", hint:"360×454px, select multiple", opts:bgOptions,
-                  onChange:e=>{if(!e.target.files)return;Array.from(e.target.files).forEach(file=>{const r=new FileReader();r.onload=ev=>{const nm=file.name.replace(/\.[^.]+$/,"").replace(/_/g," ");sBgO(p=>{const nx=[...p,{id:Date.now()+""+Math.random(),name:nm,src:ev.target.result}];if(!bgSrc)sBg(nx[0].src);return nx;});};r.readAsDataURL(file);});}},
-                { ref:btnRef, label:"2. CTA Buttons", hint:"Select multiple variants", opts:btnOptions,
-                  onChange:e=>{if(!e.target.files)return;Array.from(e.target.files).forEach(file=>{const r=new FileReader();r.onload=ev=>{const nm=file.name.replace(/\.[^.]+$/,"").replace(/_/g," ");sBtnO(p=>{const nx=[...p,{id:Date.now()+""+Math.random(),name:nm,src:ev.target.result}];if(!btnSrc)sBtn(nx[0].src);return nx;});};r.readAsDataURL(file);});}},
-                { ref:React.createRef(), label:"3. Creator Images", hint:"Upload all creator photos — non-designer will pick from these", opts:library,
-                  onChange:e=>{if(!e.target.files)return;Array.from(e.target.files).forEach(file=>{const r=new FileReader();r.onload=ev=>{const nm=file.name.replace(/\.[^.]+$/,"").replace(/_/g," ");sLib(p=>[...p,{id:Date.now()+""+Math.random(),name:nm,src:ev.target.result}]);};r.readAsDataURL(file);});}},
-              ].map((it,i)=>(
-                <div key={i} style={{ marginBottom:14 }}>
-                  <label style={{ fontSize:12, fontWeight:700, color:it.opts.length>0?"#00d4aa":"#888", display:"block", marginBottom:3 }}>{it.opts.length>0?"✓ ":""}{it.label}</label>
-                  <p style={{ fontSize:11, color:"#444", margin:"0 0 5px" }}>{it.hint}</p>
-                  <div onClick={()=>it.ref.current&&it.ref.current.click()} style={{ padding:it.opts.length>0?8:14, borderRadius:8, textAlign:"center", cursor:"pointer", background:"#111", border:it.opts.length>0?"2px solid #00d4aa":"2px dashed #2a2a2a", color:it.opts.length>0?"#00d4aa":"#444", fontSize:12 }}>
-                    {it.opts.length>0
-                      ? <div style={{ display:"flex", gap:5, flexWrap:"wrap", justifyContent:"center" }}>{it.opts.map((o,j)=><img key={j} src={o.src} alt="" style={{ height:44, borderRadius:5, border:"1px solid #333" }}/>)}</div>
-                      : "Click to upload"}
-                  </div>
-                  <input ref={it.ref} type="file" accept="image/*" multiple onChange={it.onChange} style={{ display:"none" }}/>
-                </div>
-              ))}
-
-              {[
-                { ref:fontRef, label:"3. Title Font (Trim Bold)", loaded:fontLoaded, onChange:handleFont },
-                { ref:secFontRef, label:"4. Secondary Font (optional, default Arial)", loaded:secFontLoaded, onChange:handleSecFont },
-              ].map((it,i)=>(
-                <div key={i} style={{ marginBottom:14 }}>
-                  <label style={{ fontSize:12, fontWeight:700, color:it.loaded?"#00d4aa":"#888", display:"block", marginBottom:5 }}>{it.loaded?"✓ ":""}{it.label}</label>
-                  <div onClick={()=>it.ref.current&&it.ref.current.click()} style={{ padding:12, borderRadius:8, textAlign:"center", cursor:"pointer", background:"#111", border:it.loaded?"2px solid #00d4aa":"2px dashed #2a2a2a", color:it.loaded?"#00d4aa":"#444", fontSize:12 }}>
-                    {it.loaded?"✓ Font loaded":"Click to upload .ttf / .otf / .woff2"}
-                  </div>
-                  <input ref={it.ref} type="file" accept=".ttf,.otf,.woff,.woff2" onChange={it.onChange} style={{ display:"none" }}/>
-                </div>
-              ))}
-
-              <button onClick={()=>sSD(true)} disabled={!allReady} style={{ width:"100%", padding:14, borderRadius:10, border:"none", background:allReady?"linear-gradient(135deg,#00d4aa,#7028f5)":"#1a1a1a", color:allReady?"#fff":"#444", fontSize:15, fontWeight:800, cursor:allReady?"pointer":"default", marginTop:4 }}>
-                {allReady?"Continue to Generator →":"Upload layers 1 & 2 to continue"}
-              </button>
-            </div>
-          </div>
-        );
-
-        // ── GENERATOR ────────────────────────────────────────────
-        return (
-          <div style={{ height:"100vh", background:"#0a0a0a", color:"#fff", fontFamily:"Arial,sans-serif", display:"flex", flexDirection:"column", overflow:"hidden" }}>
-            <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"8px 14px", borderBottom:"1px solid #1a1a1a", flexShrink:0 }}>
-              <span style={{ fontSize:15, fontWeight:800 }}>Daily Thumbnail <span style={{ fontSize:10, color:"#444", fontWeight:400, marginLeft:6 }}>360×454 Portrait</span></span>
-              {IS_ADMIN && <button onClick={()=>sSD(false)} style={{ background:"transparent", border:"1px solid #222", color:"#555", padding:"4px 10px", borderRadius:5, fontSize:10, cursor:"pointer" }}>⚙ Re-upload layers</button>}
-            </div>
-
-            <div style={{ display:"flex", flex:1, overflow:"hidden" }}>
-              {/* LEFT */}
-              <div style={{ width:"40%", flexShrink:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", borderRight:"1px solid #1a1a1a", background:"#0d0d0d", padding:"14px 12px", gap:12 }}>
-                <div style={{ borderRadius:10, overflow:"hidden", backgroundImage:"repeating-conic-gradient(#1a1a1a 0% 25%,#111 0% 50%)", backgroundSize:"10px 10px" }}>
-                  <canvas ref={canvasRef} width={PREVIEW_W} height={PREVIEW_H} style={{ display:"block", width:PREVIEW_W, height:PREVIEW_H }}/>
-                </div>
-                <div style={{ width:"100%", display:"flex", flexDirection:"column", gap:7 }}>
-                  <div style={{ display:"flex", gap:5 }}>
-                    <div style={{ flex:1 }}>
-                      <span style={{ fontSize:9, color:"#444", display:"block", marginBottom:3, textTransform:"uppercase" }}>Format</span>
-                      <div style={{ display:"flex", gap:3 }}>
-                        {["png","jpeg"].map(fmt=>(
-                          <button key={fmt} onClick={()=>sEF(fmt)} style={{ flex:1, padding:"5px 0", borderRadius:5, fontSize:10, fontWeight:700, cursor:"pointer", textTransform:"uppercase", border:exportFormat===fmt?"2px solid #00d4aa":"1px solid #222", background:exportFormat===fmt?"#0a201a":"#111", color:exportFormat===fmt?"#00d4aa":"#555" }}>{fmt}</button>
-                        ))}
-                      </div>
-                    </div>
-                    <div style={{ flex:1 }}>
-                      <span style={{ fontSize:9, color:"#444", display:"block", marginBottom:3, textTransform:"uppercase" }}>Scale</span>
-                      <div style={{ display:"flex", gap:3 }}>
-                        {[{s:1,l:"1×"},{s:2,l:"2×"},{s:3,l:"3×"}].map(o=>(
-                          <button key={o.s} onClick={()=>sES(o.s)} style={{ flex:1, padding:"5px 0", borderRadius:5, fontSize:10, fontWeight:700, cursor:"pointer", border:exportScale===o.s?"2px solid #00d4aa":"1px solid #222", background:exportScale===o.s?"#0a201a":"#111", color:exportScale===o.s?"#00d4aa":"#555" }}>{o.l}</button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  {exportFormat==="jpeg" && (
-                    <div>
-                      <span style={{ fontSize:9, color:"#444" }}>Quality {Math.round(jpegQuality*100)}%</span>
-                      <input type="range" min={30} max={100} value={Math.round(jpegQuality*100)} onChange={e=>sJQ(+e.target.value/100)} style={{ width:"100%", accentColor:"#00d4aa" }}/>
-                    </div>
-                  )}
-                  <p style={{ fontSize:9, color:"#333", margin:0, textAlign:"center" }}>{P.frame.w*exportScale}×{P.frame.h*exportScale}px</p>
-                  <button onClick={doExport} disabled={exporting} style={{ width:"100%", padding:"10px 0", borderRadius:8, border:"none", cursor:exporting?"wait":"pointer", background:exporting?"#222":"linear-gradient(135deg,#00d4aa,#7028f5)", color:exporting?"#555":"#fff", fontSize:13, fontWeight:800, opacity:exporting?0.6:1 }}>
-                    {exporting?"Exporting…":"⬇ Export "+exportFormat.toUpperCase()}
+        return(
+          <div style={{height:"100vh",background:"#0a0a0a",color:"#fff",fontFamily:"Arial,sans-serif",display:"flex",flexDirection:"column",overflow:"hidden"}}>
+            {/* Top bar */}
+            <div style={{display:"flex",alignItems:"center",borderBottom:"1px solid #1a1a1a",flexShrink:0,padding:"0 16px"}}>
+              <span style={{fontSize:14,fontWeight:800,marginRight:20,paddingTop:10,paddingBottom:10}}>Daily Thumbnail</span>
+              <div style={{display:"flex",gap:2}}>
+                {[{id:"generator",label:"🎨 Generator"},{id:"setup",label:"⚙️ Setup"}].map(tab=>(
+                  <button key={tab.id} onClick={()=>handleTabClick(tab.id)}
+                    style={{padding:"10px 16px",border:"none",background:"transparent",cursor:"pointer",fontSize:12,fontWeight:700,
+                      color:activeTab===tab.id?"#00d4aa":"#555",
+                      borderBottom:activeTab===tab.id?"2px solid #00d4aa":"2px solid transparent",transition:"all 0.15s"}}>
+                    {tab.label}{tab.id==="setup"&&!isAdminUnlocked&&<span style={{marginLeft:4,fontSize:9,color:"#333"}}>🔒</span>}
                   </button>
-                  {expMsg && <p style={{ textAlign:"center", fontSize:11, color:expMsg.startsWith("✓")?"#00d4aa":"#f44", margin:0 }}>{expMsg}</p>}
-                </div>
+                ))}
+              </div>
+            </div>
+
+            {/* ── GENERATOR TAB ── */}
+            <div style={{display:activeTab==="generator"?"flex":"none",flex:1,overflow:"hidden"}}>
+              {/* LEFT — preview */}
+              <div style={{width:"40%",flexShrink:0,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",borderRight:"1px solid #1a1a1a",background:"#0d0d0d",padding:"14px 12px",gap:12}}>
+                {allReady?(
+                  <>
+                    <div style={{borderRadius:10,overflow:"hidden",backgroundImage:"repeating-conic-gradient(#1a1a1a 0% 25%,#111 0% 50%)",backgroundSize:"10px 10px"}}>
+                      <canvas ref={canvasRef} width={PREVIEW_W} height={PREVIEW_H} style={{display:"block",width:PREVIEW_W,height:PREVIEW_H}}/>
+                    </div>
+                    <div style={{width:"100%",display:"flex",flexDirection:"column",gap:7}}>
+                      <div style={{display:"flex",gap:5}}>
+                        <div style={{flex:1}}>
+                          <span style={{fontSize:9,color:"#444",display:"block",marginBottom:3,textTransform:"uppercase"}}>Format</span>
+                          <div style={{display:"flex",gap:3}}>{["png","jpeg"].map(fmt=><button key={fmt} onClick={()=>sEF(fmt)} style={{flex:1,padding:"5px 0",borderRadius:5,fontSize:10,fontWeight:700,cursor:"pointer",textTransform:"uppercase",border:exportFormat===fmt?"2px solid #00d4aa":"1px solid #222",background:exportFormat===fmt?"#0a201a":"#111",color:exportFormat===fmt?"#00d4aa":"#555"}}>{fmt}</button>)}</div>
+                        </div>
+                        <div style={{flex:1}}>
+                          <span style={{fontSize:9,color:"#444",display:"block",marginBottom:3,textTransform:"uppercase"}}>Scale</span>
+                          <div style={{display:"flex",gap:3}}>{[{s:1,l:"1×"},{s:2,l:"2×"},{s:3,l:"3×"}].map(o=><button key={o.s} onClick={()=>sES(o.s)} style={{flex:1,padding:"5px 0",borderRadius:5,fontSize:10,fontWeight:700,cursor:"pointer",border:exportScale===o.s?"2px solid #00d4aa":"1px solid #222",background:exportScale===o.s?"#0a201a":"#111",color:exportScale===o.s?"#00d4aa":"#555"}}>{o.l}</button>)}</div>
+                        </div>
+                      </div>
+                      {exportFormat==="jpeg"&&<div><span style={{fontSize:9,color:"#444"}}>Quality {Math.round(jpegQuality*100)}%</span><input type="range" min={30} max={100} value={Math.round(jpegQuality*100)} onChange={e=>sJQ(+e.target.value/100)} style={{width:"100%",accentColor:"#00d4aa"}}/></div>}
+                      <p style={{fontSize:9,color:"#333",margin:0,textAlign:"center"}}>{P.frame.w*exportScale}×{P.frame.h*exportScale}px</p>
+                      <button onClick={doExport} disabled={exporting} style={{width:"100%",padding:"10px 0",borderRadius:8,border:"none",cursor:exporting?"wait":"pointer",background:exporting?"#222":"linear-gradient(135deg,#00d4aa,#7028f5)",color:exporting?"#555":"#fff",fontSize:13,fontWeight:800,opacity:exporting?0.6:1}}>
+                        {exporting?"Exporting…":"⬇ Export "+exportFormat.toUpperCase()}
+                      </button>
+                      {expMsg&&<p style={{textAlign:"center",fontSize:11,color:expMsg.startsWith("✓")?"#00d4aa":"#f44",margin:0}}>{expMsg}</p>}
+                    </div>
+                  </>
+                ):(
+                  <div style={{textAlign:"center",color:"#444",fontSize:13,padding:20}}>
+                    <div style={{fontSize:32,marginBottom:8}}>⏳</div>
+                    <p style={{fontWeight:700,color:"#666",marginBottom:4}}>Not ready yet</p>
+                    <p style={{fontSize:11,lineHeight:1.5}}>Go to <strong style={{color:"#00d4aa"}}>⚙️ Setup</strong> tab<br/>and upload your assets</p>
+                  </div>
+                )}
               </div>
 
-              {/* RIGHT */}
-              <div style={{ flex:1, overflowY:"auto", minWidth:0 }}>
-
-                <Section title="Background" icon="🖼" id="bg" open={openSection==="bg"} onToggle={toggleSection}>
-                  <div style={{ display:"flex", gap:5, flexWrap:"wrap", alignItems:"center" }}>
-                    {bgOptions.map((o,i)=>{const sel=bgSrc===o.src;return(
-                      <div key={o.id||i} style={{ position:"relative" }}>
-                        <div onClick={()=>sBg(o.src)} style={{ width:44, height:56, borderRadius:6, cursor:"pointer", overflow:"hidden", border:sel?"2px solid #00d4aa":"2px solid #222" }}>
-                          <img src={o.src} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }}/>
-                        </div>
-                        <div onClick={e=>{e.stopPropagation();removeBgLib(o.id);if(bgSrc===o.src){const nx=bgOptions.find(x=>x.id!==o.id);if(nx)sBg(nx.src);}}} style={{ position:"absolute", top:-3, right:-3, width:14, height:14, borderRadius:7, background:"#f44", color:"#fff", fontSize:8, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", fontWeight:700 }}>✕</div>
-                      </div>);})}
-                    <div onClick={()=>bgLibRef.current&&bgLibRef.current.click()} style={{ width:44, height:56, borderRadius:6, border:"2px dashed #2a2a2a", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", color:"#444", fontSize:20 }}>+</div>
-                    <input ref={bgLibRef} type="file" accept="image/*" multiple onChange={e=>{if(!e.target.files)return;Array.from(e.target.files).forEach(file=>{const r=new FileReader();r.onload=ev=>{const nm=file.name.replace(/\.[^.]+$/,"").replace(/_/g," ");sBgO(p=>[...p,{id:Date.now()+""+Math.random(),name:nm,src:ev.target.result}]);};r.readAsDataURL(file);});}} style={{ display:"none" }}/>
-                  </div>
-                </Section>
-
+              {/* RIGHT — controls */}
+              <div style={{flex:1,overflowY:"auto",minWidth:0}}>
                 <Section title="Creator Image" icon="👤" id="creator" open={openSection==="creator"} onToggle={toggleSection}>
-                  {/* Search */}
-                  {library.length > 6 && (
-                    <input value={libSearch} onChange={e=>sLS(e.target.value)} placeholder="Search creator name…"
-                      style={{ width:"100%", padding:"7px 10px", borderRadius:6, border:"1px solid #222", background:"#111", color:"#fff", fontSize:12, outline:"none", boxSizing:"border-box" }}/>
-                  )}
-                  {/* Creator grid */}
-                  {filteredLib.length === 0
-                    ? <div style={{ textAlign:"center", color:"#444", fontSize:12, padding:"16px 0" }}>No creators found</div>
-                    : <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:7, maxHeight:340, overflowY:"auto" }}>
-                        {filteredLib.map(it=>(
-                          <div key={it.id} onClick={()=>{sCS(it.src);sIX(0);sIY(0);sIZ(100);}}
-                            style={{ cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
-                            <div style={{ width:"100%", aspectRatio:"1", borderRadius:8, overflow:"hidden", border:creatorSrc===it.src?"2px solid #00d4aa":"2px solid #222" }}>
-                              <img src={it.src} alt={it.name} style={{ width:"100%", height:"100%", objectFit:"cover" }}/>
-                            </div>
-                            <span style={{ fontSize:9, color:creatorSrc===it.src?"#00d4aa":"#666", textAlign:"center", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", width:"100%" }}>{it.name}</span>
-                          </div>
-                        ))}
-                      </div>
-                  }
-                  {/* Admin-only: add more creators without going to setup */}
-                  {IS_ADMIN && (
-                    <div style={{ borderTop:"1px solid #1a1a1a", paddingTop:8, display:"flex", justifyContent:"flex-end" }}>
-                      <button onClick={()=>libRef.current&&libRef.current.click()} style={{ padding:"5px 12px", borderRadius:6, border:"1px solid #333", background:"#111", color:"#00d4aa", fontSize:11, cursor:"pointer" }}>+ Add creators</button>
-                      <input ref={libRef} type="file" accept="image/*" multiple onChange={e=>{if(!e.target.files)return;Array.from(e.target.files).forEach(file=>{const r=new FileReader();r.onload=ev=>{const nm=file.name.replace(/\.[^.]+$/,"").replace(/_/g," ");sLib(p=>[...p,{id:Date.now()+""+Math.random(),name:nm,src:ev.target.result}]);};r.readAsDataURL(file);});}} style={{ display:"none" }}/>
-                    </div>
-                  )}
-                  {/* Image position controls — only show once a creator is selected */}
-                  {creatorSrc && (
-                    <div style={{ display:"flex", flexDirection:"column", gap:7, borderTop:"1px solid #1a1a1a", paddingTop:8 }}>
-                      <span style={{ fontSize:10, color:"#555" }}>Adjust position</span>
+                  {library.length>6&&<input value={libSearch} onChange={e=>sLS(e.target.value)} placeholder="Search creator name…" style={{width:"100%",padding:"7px 10px",borderRadius:6,border:"1px solid #222",background:"#111",color:"#fff",fontSize:12,outline:"none",boxSizing:"border-box"}}/>}
+                  {filteredLib.length===0
+                    ?<div style={{textAlign:"center",color:"#444",fontSize:12,padding:"16px 0"}}>{library.length===0?"No creators yet — go to ⚙️ Setup":"No match"}</div>
+                    :<div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:7,maxHeight:300,overflowY:"auto"}}>
+                      {filteredLib.map(it=>(
+                        <div key={it.id} onClick={()=>{sCS(it.src);sIX(0);sIY(0);sIZ(100);}} style={{cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
+                          <div style={{width:"100%",aspectRatio:"1",borderRadius:8,overflow:"hidden",border:creatorSrc===it.src?"2px solid #00d4aa":"2px solid #222"}}>
+                            <img src={it.src} alt={it.name} style={{width:"100%",height:"100%",objectFit:"cover"}}/></div>
+                          <span style={{fontSize:9,color:creatorSrc===it.src?"#00d4aa":"#666",textAlign:"center",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",width:"100%"}}>{it.name}</span>
+                        </div>))}
+                    </div>}
+                  {creatorSrc&&(
+                    <div style={{borderTop:"1px solid #1a1a1a",paddingTop:8,display:"flex",flexDirection:"column",gap:7}}>
+                      <span style={{fontSize:10,color:"#555"}}>Adjust position</span>
                       <SliderRow label="Zoom" value={imgZoom} min={50} max={200} unit="%" onChange={sIZ}/>
                       <SliderRow label="Horizontal" value={imgX} min={-150} max={150} unit="px" onChange={sIX}/>
                       <SliderRow label="Vertical" value={imgY} min={-150} max={150} unit="px" onChange={sIY}/>
-                      <button onClick={()=>{sIX(0);sIY(0);sIZ(100);}} style={{ alignSelf:"flex-end", padding:"4px 10px", borderRadius:5, border:"1px solid #222", background:"#0a0a0a", color:"#555", fontSize:10, cursor:"pointer" }}>Reset</button>
+                      <button onClick={()=>{sIX(0);sIY(0);sIZ(100);}} style={{alignSelf:"flex-end",padding:"4px 10px",borderRadius:5,border:"1px solid #222",background:"#0a0a0a",color:"#555",fontSize:10,cursor:"pointer"}}>Reset</button>
                     </div>
                   )}
                 </Section>
 
+                <Section title="Background" icon="🖼" id="bg" open={openSection==="bg"} onToggle={toggleSection}>
+                  <div style={{display:"flex",gap:5,flexWrap:"wrap"}}>
+                    {bgOptions.length===0&&<span style={{fontSize:12,color:"#444"}}>No backgrounds yet — go to ⚙️ Setup</span>}
+                    {bgOptions.map((o,i)=>{const sel=bgSrc===o.src;return(
+                      <div key={o.id||i} onClick={()=>sBg(o.src)} style={{width:44,height:56,borderRadius:6,cursor:"pointer",overflow:"hidden",border:sel?"2px solid #00d4aa":"2px solid #222"}}>
+                        <img src={o.src} alt="" style={{width:"100%",height:"100%",objectFit:"cover"}}/></div>);})}
+                  </div>
+                </Section>
+
                 <Section title="Title Text" icon="✏️" id="title" open={openSection==="title"} onToggle={toggleSection}>
-                  <div style={{ display:"flex", gap:8 }}>
-                    <div style={{ flex:1 }}><label style={lbl}>Line 1</label><input value={line1} onChange={e=>sL1(e.target.value)} style={inp}/></div>
-                    <div style={{ flex:1 }}><label style={lbl}>Line 2</label><input value={line2} onChange={e=>sL2(e.target.value)} style={inp} placeholder="Optional"/></div>
+                  <div style={{display:"flex",gap:8}}>
+                    <div style={{flex:1}}><label style={lbl}>Line 1</label><input value={line1} onChange={e=>sL1(e.target.value)} style={inp}/></div>
+                    <div style={{flex:1}}><label style={lbl}>Line 2</label><input value={line2} onChange={e=>sL2(e.target.value)} style={inp} placeholder="Optional"/></div>
                   </div>
                   <ColorPicker label="Stroke Color" value={strokeColor} onChange={sStroke}/>
                   <ColorPicker label="Fill Color" value={titleColor} onChange={setTC}/>
@@ -556,73 +404,139 @@
                   <SliderRow label="Letter Spacing" value={titleLetterSpacing} min={-5} max={20} unit="px" onChange={setTLS}/>
                   <SliderRow label="Line Height" value={titleLineHeight} min={60} max={140} unit="%" onChange={setTLH}/>
                   <SliderRow label="Vertical Offset" value={titleYOffset} min={-100} max={100} unit="px" onChange={setTYO}/>
-                  <button onClick={()=>{setTFS(40);setTLS(0);setTLH(91);setTYO(0);setTC("#FFFFFF");setTSW(6);}} style={{ alignSelf:"flex-end", padding:"4px 10px", borderRadius:5, border:"1px solid #222", background:"#0a0a0a", color:"#555", fontSize:10, cursor:"pointer" }}>Reset defaults</button>
+                  <button onClick={()=>{setTFS(40);setTLS(0);setTLH(91);setTYO(0);setTC("#FFFFFF");setTSW(6);}} style={{alignSelf:"flex-end",padding:"4px 10px",borderRadius:5,border:"1px solid #222",background:"#0a0a0a",color:"#555",fontSize:10,cursor:"pointer"}}>Reset defaults</button>
                 </Section>
 
                 <Section title="Secondary Text / Flag" icon="🏷️" id="secondary" open={openSection==="secondary"} onToggle={toggleSection}>
-                  <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-                    <span style={{ fontSize:11, color:"#666", fontWeight:600 }}>Show Country Flag</span>
-                    <div onClick={()=>sSF(!showFlag)} style={{ width:36, height:20, borderRadius:10, cursor:"pointer", background:showFlag?"#00d4aa":"#2a2a2a", position:"relative", transition:"background 0.2s" }}>
-                      <div style={{ width:16, height:16, borderRadius:8, background:"#fff", position:"absolute", top:2, left:showFlag?18:2, transition:"left 0.2s" }}/>
-                    </div>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                    <span style={{fontSize:11,color:"#666",fontWeight:600}}>Show Country Flag</span>
+                    <div onClick={()=>sSF(!showFlag)} style={{width:36,height:20,borderRadius:10,cursor:"pointer",background:showFlag?"#00d4aa":"#2a2a2a",position:"relative",transition:"background 0.2s"}}>
+                      <div style={{width:16,height:16,borderRadius:8,background:"#fff",position:"absolute",top:2,left:showFlag?18:2,transition:"left 0.2s"}}/></div>
                   </div>
-                  {showFlag ? (
-                    <div style={{ position:"relative", zIndex:100 }}>
-                      <div onClick={()=>{sFO(!flagOpen);sFSr("");}} style={{ padding:"8px 10px", borderRadius:7, background:"#111", border:"1px solid #222", cursor:"pointer", display:"flex", alignItems:"center", gap:8 }}>
-                        {flagSrc?<img src={flagSrc} alt="" style={{ width:24, height:16, borderRadius:2, objectFit:"cover" }}/>:<span style={{ width:24, height:16, background:"#333", borderRadius:2, display:"inline-block" }}/>}
-                        <span style={{ flex:1, fontSize:12, color:"#fff" }}>{flagLabel||"Select country flag"}</span>
-                        <span style={{ color:"#444", fontSize:10 }}>{flagOpen?"▲":"▼"}</span>
+                  {showFlag?(
+                    <div style={{position:"relative",zIndex:100}}>
+                      <div onClick={()=>{sFO(!flagOpen);sFSr("");}} style={{padding:"8px 10px",borderRadius:7,background:"#111",border:"1px solid #222",cursor:"pointer",display:"flex",alignItems:"center",gap:8}}>
+                        {flagSrc?<img src={flagSrc} alt="" style={{width:24,height:16,borderRadius:2,objectFit:"cover"}}/>:<span style={{width:24,height:16,background:"#333",borderRadius:2,display:"inline-block"}}/>}
+                        <span style={{flex:1,fontSize:12,color:"#fff"}}>{flagLabel||"Select country flag"}</span>
+                        <span style={{color:"#444",fontSize:10}}>{flagOpen?"▲":"▼"}</span>
                       </div>
-                      {flagOpen && (
-                        <div style={{ position:"absolute", top:"100%", left:0, right:0, background:"#181818", border:"1px solid #333", borderRadius:8, maxHeight:260, overflow:"hidden", marginTop:4, display:"flex", flexDirection:"column", zIndex:200 }}>
-                          <div style={{ padding:7, borderBottom:"1px solid #222" }}>
-                            <input value={flagSearch} onChange={e=>sFSr(e.target.value)} placeholder="Search country…" autoFocus style={{ width:"100%", padding:"6px 8px", borderRadius:5, border:"1px solid #333", background:"#0a0a0a", color:"#fff", fontSize:12, boxSizing:"border-box", outline:"none" }}/>
-                          </div>
-                          <div style={{ overflowY:"auto", flex:1 }}>
+                      {flagOpen&&(
+                        <div style={{position:"absolute",top:"100%",left:0,right:0,background:"#181818",border:"1px solid #333",borderRadius:8,maxHeight:260,overflow:"hidden",marginTop:4,display:"flex",flexDirection:"column",zIndex:200}}>
+                          <div style={{padding:7,borderBottom:"1px solid #222"}}><input value={flagSearch} onChange={e=>sFSr(e.target.value)} placeholder="Search country…" autoFocus style={{width:"100%",padding:"6px 8px",borderRadius:5,border:"1px solid #333",background:"#0a0a0a",color:"#fff",fontSize:12,boxSizing:"border-box",outline:"none"}}/></div>
+                          <div style={{overflowY:"auto",flex:1}}>
                             {CF.filter(f=>f.name.toLowerCase().includes(flagSearch.toLowerCase())).map(f=>(
-                              <div key={f.name} onClick={()=>{sFS(flagUrl(f.code));sFL(f.name);sFO(false);}} style={{ padding:"6px 10px", cursor:"pointer", display:"flex", alignItems:"center", gap:8, background:flagLabel===f.name?"#0a201a":"transparent", borderLeft:flagLabel===f.name?"2px solid #00d4aa":"2px solid transparent" }}>
-                                <img src={flagUrl(f.code)} alt="" style={{ width:24, height:16, borderRadius:2, objectFit:"cover" }}/>
-                                <span style={{ fontSize:12, color:flagLabel===f.name?"#00d4aa":"#bbb" }}>{f.name}</span>
+                              <div key={f.name} onClick={()=>{sFS(flagUrl(f.code));sFL(f.name);sFO(false);}} style={{padding:"6px 10px",cursor:"pointer",display:"flex",alignItems:"center",gap:8,background:flagLabel===f.name?"#0a201a":"transparent",borderLeft:flagLabel===f.name?"2px solid #00d4aa":"2px solid transparent"}}>
+                                <img src={flagUrl(f.code)} alt="" style={{width:24,height:16,borderRadius:2,objectFit:"cover"}}/>
+                                <span style={{fontSize:12,color:flagLabel===f.name?"#00d4aa":"#bbb"}}>{f.name}</span>
                               </div>))}
                           </div>
-                          <div style={{ borderTop:"1px solid #222", padding:7 }}>
-                            <div onClick={()=>flRef.current&&flRef.current.click()} style={{ padding:"6px 10px", borderRadius:5, background:"#0a0a0a", cursor:"pointer", textAlign:"center", fontSize:11, color:"#666" }}>Upload custom flag</div>
-                          </div>
+                          <div style={{borderTop:"1px solid #222",padding:7}}><div onClick={()=>flRef.current&&flRef.current.click()} style={{padding:"6px 10px",borderRadius:5,background:"#0a0a0a",cursor:"pointer",textAlign:"center",fontSize:11,color:"#666"}}>Upload custom flag</div></div>
                         </div>
                       )}
                     </div>
-                  ) : (
+                  ):(
                     <>
-                      <div><label style={lbl}>Text Content</label>
-                        <input value={secondaryText} onChange={e=>sSecT(e.target.value)} placeholder="e.g. 7:30 PM IST | Mar 28" style={{ ...inp, textTransform:"none", fontWeight:400, fontSize:12 }}/></div>
+                      <div><label style={lbl}>Text Content</label><input value={secondaryText} onChange={e=>sSecT(e.target.value)} placeholder="e.g. 7:30 PM IST | Mar 28" style={{...inp,textTransform:"none",fontWeight:400,fontSize:12}}/></div>
                       <ColorPicker label="Text Color" value={secColor} onChange={setSC}/>
                       <SliderRow label="Font Size" value={secFontSize} min={8} max={40} unit="px" onChange={setSFS}/>
                       <SliderRow label="Letter Spacing" value={secLetterSpacing} min={-3} max={15} unit="px" onChange={setSLS}/>
                       <SliderRow label="Horizontal Offset" value={secXOffset} min={-180} max={180} unit="px" onChange={setSXO}/>
                       <SliderRow label="Vertical Offset" value={secYOffset} min={-100} max={100} unit="px" onChange={setSYO}/>
-                      <button onClick={()=>{setSFS(16);setSLS(0);setSC("#FFFFFF");setSYO(0);setSXO(0);}} style={{ alignSelf:"flex-end", padding:"4px 10px", borderRadius:5, border:"1px solid #222", background:"#0a0a0a", color:"#555", fontSize:10, cursor:"pointer" }}>Reset defaults</button>
+                      <button onClick={()=>{setSFS(16);setSLS(0);setSC("#FFFFFF");setSYO(0);setSXO(0);}} style={{alignSelf:"flex-end",padding:"4px 10px",borderRadius:5,border:"1px solid #222",background:"#0a0a0a",color:"#555",fontSize:10,cursor:"pointer"}}>Reset defaults</button>
                     </>
                   )}
                 </Section>
 
-                {btnOptions.length > 1 && (
+                {btnOptions.length>1&&(
                   <Section title="CTA Button" icon="🔘" id="cta" open={openSection==="cta"} onToggle={toggleSection}>
-                    <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                    <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                       {btnOptions.map((o,i)=>{const sel=btnSrc===o.src;return(
-                        <div key={i} onClick={()=>sBtn(o.src)} style={{ flex:"1 1 45%", padding:6, borderRadius:7, cursor:"pointer", border:sel?"2px solid #00d4aa":"1px solid #222", background:sel?"#0a201a":"#111", display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}>
-                          <img src={o.src} alt={o.name} style={{ height:22, objectFit:"contain", borderRadius:3 }}/>
-                          <span style={{ fontSize:9, color:sel?"#00d4aa":"#555" }}>{o.name}</span>
+                        <div key={i} onClick={()=>sBtn(o.src)} style={{flex:"1 1 45%",padding:6,borderRadius:7,cursor:"pointer",border:sel?"2px solid #00d4aa":"1px solid #222",background:sel?"#0a201a":"#111",display:"flex",flexDirection:"column",alignItems:"center",gap:3}}>
+                          <img src={o.src} alt={o.name} style={{height:22,objectFit:"contain",borderRadius:3}}/>
+                          <span style={{fontSize:9,color:sel?"#00d4aa":"#555"}}>{o.name}</span>
                         </div>);})}
                     </div>
                   </Section>
                 )}
-
-                <div style={{ height:40 }}/>
+                <div style={{height:40}}/>
               </div>
             </div>
 
-            <input ref={flRef} type="file" accept="image/*" onChange={e=>rdFile(e).then(d=>{if(d){sFS(d);sFL(e.target.files[0].name.replace(/\.[^.]+$/,""));sFO(false);}})} style={{ display:"none" }}/>
-            {flagOpen && <div onClick={()=>sFO(false)} style={{ position:"fixed", inset:0, zIndex:99 }}/>}
+            {/* ── SETUP TAB ── */}
+            {activeTab==="setup"&&isAdminUnlocked&&(
+              <div style={{overflowY:"auto",flex:1,padding:16}}>
+                <p style={{fontSize:12,color:"#555",marginBottom:20}}>Upload your assets once. Saved in the browser for everyone using the tool.</p>
+
+                <div style={{marginBottom:20}}>
+                  <label style={{fontSize:13,fontWeight:700,color:bgOptions.length>0?"#00d4aa":"#888",display:"block",marginBottom:3}}>{bgOptions.length>0?"✓ ":""}1. Background Gradients</label>
+                  <p style={{fontSize:11,color:"#444",marginBottom:6}}>360×454px, select multiple</p>
+                  <div onClick={()=>bgRef.current&&bgRef.current.click()} style={{padding:bgOptions.length>0?8:14,borderRadius:8,textAlign:"center",cursor:"pointer",background:"#111",border:bgOptions.length>0?"2px solid #00d4aa":"2px dashed #2a2a2a",color:bgOptions.length>0?"#00d4aa":"#444",fontSize:12,marginBottom:6}}>
+                    {bgOptions.length>0
+                      ?<div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{bgOptions.map((o,i)=><div key={o.id||i} style={{position:"relative"}}><img src={o.src} alt="" style={{height:52,borderRadius:5,border:"1px solid #333"}}/><div onClick={e=>{e.stopPropagation();sBgO(p=>p.filter(x=>x.id!==o.id));if(bgSrc===o.src){const nx=bgOptions.find(x=>x.id!==o.id);sBg(nx?nx.src:null);}}} style={{position:"absolute",top:-4,right:-4,width:14,height:14,borderRadius:7,background:"#f44",color:"#fff",fontSize:8,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>✕</div></div>)}</div>
+                      :"Click to upload backgrounds"}
+                  </div>
+                  {bgOptions.length>0&&<button onClick={()=>bgRef.current&&bgRef.current.click()} style={{padding:"5px 12px",borderRadius:6,border:"1px solid #333",background:"#111",color:"#00d4aa",fontSize:11,cursor:"pointer"}}>+ Add more</button>}
+                  <input ref={bgRef} type="file" accept="image/*" multiple onChange={e=>{if(!e.target.files)return;Array.from(e.target.files).forEach(file=>{const r=new FileReader();r.onload=ev=>{const nm=file.name.replace(/\.[^.]+$/,"").replace(/_/g," ");sBgO(p=>{const nx=[...p,{id:Date.now()+""+Math.random(),name:nm,src:ev.target.result}];if(!bgSrc)sBg(nx[0].src);return nx;});};r.readAsDataURL(file);});}} style={{display:"none"}}/>
+                </div>
+
+                <div style={{marginBottom:20}}>
+                  <label style={{fontSize:13,fontWeight:700,color:btnOptions.length>0?"#00d4aa":"#888",display:"block",marginBottom:3}}>{btnOptions.length>0?"✓ ":""}2. CTA Buttons</label>
+                  <p style={{fontSize:11,color:"#444",marginBottom:6}}>Upload all button variants</p>
+                  <div onClick={()=>btnRef.current&&btnRef.current.click()} style={{padding:btnOptions.length>0?8:14,borderRadius:8,textAlign:"center",cursor:"pointer",background:"#111",border:btnOptions.length>0?"2px solid #00d4aa":"2px dashed #2a2a2a",color:btnOptions.length>0?"#00d4aa":"#444",fontSize:12,marginBottom:6}}>
+                    {btnOptions.length>0
+                      ?<div style={{display:"flex",gap:5,flexWrap:"wrap"}}>{btnOptions.map((o,i)=><div key={i} style={{position:"relative"}}><img src={o.src} alt="" style={{height:32,borderRadius:5,border:"1px solid #333"}}/><div onClick={e=>{e.stopPropagation();sBtnO(p=>p.filter((_,j)=>j!==i));if(btnSrc===o.src)sBtn(null);}} style={{position:"absolute",top:-4,right:-4,width:14,height:14,borderRadius:7,background:"#f44",color:"#fff",fontSize:8,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>✕</div></div>)}</div>
+                      :"Click to upload buttons"}
+                  </div>
+                  {btnOptions.length>0&&<button onClick={()=>btnRef.current&&btnRef.current.click()} style={{padding:"5px 12px",borderRadius:6,border:"1px solid #333",background:"#111",color:"#00d4aa",fontSize:11,cursor:"pointer"}}>+ Add more</button>}
+                  <input ref={btnRef} type="file" accept="image/*" multiple onChange={e=>{if(!e.target.files)return;Array.from(e.target.files).forEach(file=>{const r=new FileReader();r.onload=ev=>{const nm=file.name.replace(/\.[^.]+$/,"").replace(/_/g," ");sBtnO(p=>{const nx=[...p,{id:Date.now()+""+Math.random(),name:nm,src:ev.target.result}];if(!btnSrc)sBtn(nx[0].src);return nx;});};r.readAsDataURL(file);});}} style={{display:"none"}}/>
+                </div>
+
+                <div style={{marginBottom:20}}>
+                  <label style={{fontSize:13,fontWeight:700,color:library.length>0?"#00d4aa":"#888",display:"block",marginBottom:3}}>{library.length>0?"✓ ":""}3. Creator Images</label>
+                  <p style={{fontSize:11,color:"#444",marginBottom:6}}>Non-designer picks from these in the generator</p>
+                  {library.length>0&&(
+                    <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:6,marginBottom:8,maxHeight:180,overflowY:"auto",background:"#0d0d0d",borderRadius:8,padding:8,border:"1px solid #1a1a1a"}}>
+                      {library.map(it=>(
+                        <div key={it.id} style={{position:"relative"}}>
+                          <div style={{aspectRatio:"1",borderRadius:6,overflow:"hidden",border:"1px solid #222"}}><img src={it.src} alt={it.name} style={{width:"100%",height:"100%",objectFit:"cover"}}/></div>
+                          <div style={{fontSize:9,color:"#666",textAlign:"center",marginTop:2,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.name}</div>
+                          <div onClick={()=>sLib(p=>p.filter(x=>x.id!==it.id))} style={{position:"absolute",top:-3,right:-3,width:14,height:14,borderRadius:7,background:"#f44",color:"#fff",fontSize:8,display:"flex",alignItems:"center",justifyContent:"center",cursor:"pointer"}}>✕</div>
+                        </div>))}
+                    </div>
+                  )}
+                  <button onClick={()=>crLibRef.current&&crLibRef.current.click()} style={{padding:"10px 0",borderRadius:8,border:library.length>0?"1px solid #333":"2px dashed #2a2a2a",background:"#111",color:library.length>0?"#00d4aa":"#555",fontSize:12,cursor:"pointer",width:"100%"}}>
+                    {library.length>0?"+ Add more creators":"Click to upload creator photos"}
+                  </button>
+                  <input ref={crLibRef} type="file" accept="image/*" multiple onChange={e=>{if(!e.target.files)return;Array.from(e.target.files).forEach(file=>{const r=new FileReader();r.onload=ev=>{const nm=file.name.replace(/\.[^.]+$/,"").replace(/_/g," ");sLib(p=>[...p,{id:Date.now()+""+Math.random(),name:nm,src:ev.target.result}]);};r.readAsDataURL(file);});}} style={{display:"none"}}/>
+                </div>
+
+                <div style={{marginBottom:16}}>
+                  <label style={{fontSize:13,fontWeight:700,color:fontLoaded?"#00d4aa":"#888",display:"block",marginBottom:5}}>{fontLoaded?"✓ ":""}4. Title Font (Trim Bold)</label>
+                  <div onClick={()=>fontRef.current&&fontRef.current.click()} style={{padding:12,borderRadius:8,textAlign:"center",cursor:"pointer",background:"#111",border:fontLoaded?"2px solid #00d4aa":"2px dashed #2a2a2a",color:fontLoaded?"#00d4aa":"#444",fontSize:12}}>
+                    {fontLoaded?"✓ Trim Bold loaded":"Click to upload .ttf / .otf / .woff2"}
+                  </div>
+                  <input ref={fontRef} type="file" accept=".ttf,.otf,.woff,.woff2" onChange={handleFont} style={{display:"none"}}/>
+                </div>
+
+                <div style={{marginBottom:24}}>
+                  <label style={{fontSize:13,fontWeight:700,color:secFontLoaded?"#00d4aa":"#888",display:"block",marginBottom:5}}>{secFontLoaded?"✓ ":""}5. Secondary Font (optional, default Arial)</label>
+                  <div onClick={()=>secFontRef.current&&secFontRef.current.click()} style={{padding:12,borderRadius:8,textAlign:"center",cursor:"pointer",background:"#111",border:secFontLoaded?"2px solid #00d4aa":"2px dashed #2a2a2a",color:secFontLoaded?"#00d4aa":"#444",fontSize:12}}>
+                    {secFontLoaded?"✓ Font loaded":"Click to upload .ttf / .otf / .woff2"}
+                  </div>
+                  <input ref={secFontRef} type="file" accept=".ttf,.otf,.woff,.woff2" onChange={handleSecFont} style={{display:"none"}}/>
+                </div>
+
+                <div style={{padding:"12px 14px",borderRadius:10,background:allReady?"#0a201a":"#111",border:allReady?"1px solid #00d4aa":"1px solid #2a2a2a",textAlign:"center"}}>
+                  {allReady
+                    ?<span style={{color:"#00d4aa",fontSize:13,fontWeight:700}}>✓ Setup complete — Generator is ready</span>
+                    :<span style={{color:"#555",fontSize:12}}>Upload backgrounds and buttons to enable the generator</span>}
+                </div>
+              </div>
+            )}
+
+            {showPwModal&&<PasswordModal onSuccess={onPwSuccess} onCancel={()=>setShowPwModal(false)}/>}
+            <input ref={flRef} type="file" accept="image/*" onChange={e=>rdFile(e).then(d=>{if(d){sFS(d);sFL(e.target.files[0].name.replace(/\.[^.]+$/,""));sFO(false);}})} style={{display:"none"}}/>
+            {flagOpen&&<div onClick={()=>sFO(false)} style={{position:"fixed",inset:0,zIndex:99}}/>}
           </div>
         );
       }

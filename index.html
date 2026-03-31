@@ -20,6 +20,9 @@
     <script type="text/babel" data-presets="react">
       const { useState, useRef, useCallback, useEffect } = React;
 
+      // ── Setup access — only via ?setup=true in URL ───────────────
+      const IS_ADMIN = new URLSearchParams(window.location.search).get("setup") === "true";
+
       // ── Storage shim (localStorage) ──────────────────────────────
       window.storage = {
         get: (key) => {
@@ -269,7 +272,12 @@
         const [secFontName,sSecFN]=useState("Arial");
         const [secFontLoaded,sSecFL]=useState(false);
 
-        const [setupDone,sSD]=useState(false);
+        const [setupDone,sSD]=useState(()=>{
+          // Non-admin always skips setup (uses saved layers)
+          if(!IS_ADMIN) return true;
+          // Admin starts in setup if no bg saved
+                        try { return !!localStorage.getItem("bg-library") && !!localStorage.getItem("btn-library"); } catch { return false; }
+        });
         const [exporting,sEx]=useState(false);
         const [expMsg,sEM]=useState("");
         const [exportScale,sES]=useState(2);
@@ -376,8 +384,17 @@
 
         const filteredLib = library.filter(x=>x.name.toLowerCase().includes(libSearch.toLowerCase()));
 
-        // ── SETUP ────────────────────────────────────────────────
-        if(!setupDone) return (
+        // Non-admin with no layers saved yet
+        if(!allReady && !IS_ADMIN) return (
+          <div style={{ minHeight:"100vh", background:"#0a0a0a", color:"#fff", fontFamily:"Arial,sans-serif", display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:12 }}>
+            <div style={{ fontSize:32 }}>⏳</div>
+            <p style={{ fontSize:16, fontWeight:700, color:"#fff" }}>Tool is being set up</p>
+            <p style={{ fontSize:13, color:"#555" }}>Check back shortly — the admin hasn't uploaded the layers yet.</p>
+          </div>
+        );
+
+        // Only show setup screen to admin
+        if(!setupDone && IS_ADMIN) return (
           <div style={{ minHeight:"100vh", background:"#0a0a0a", color:"#fff", fontFamily:"Arial,sans-serif", display:"flex", alignItems:"center", justifyContent:"center" }}>
             <div style={{ width:"100%", maxWidth:440, padding:"24px 20px" }}>
               <h1 style={{ fontSize:20, fontWeight:800, margin:"0 0 4px" }}>Setup — Upload Layers</h1>
@@ -388,6 +405,8 @@
                   onChange:e=>{if(!e.target.files)return;Array.from(e.target.files).forEach(file=>{const r=new FileReader();r.onload=ev=>{const nm=file.name.replace(/\.[^.]+$/,"").replace(/_/g," ");sBgO(p=>{const nx=[...p,{id:Date.now()+""+Math.random(),name:nm,src:ev.target.result}];if(!bgSrc)sBg(nx[0].src);return nx;});};r.readAsDataURL(file);});}},
                 { ref:btnRef, label:"2. CTA Buttons", hint:"Select multiple variants", opts:btnOptions,
                   onChange:e=>{if(!e.target.files)return;Array.from(e.target.files).forEach(file=>{const r=new FileReader();r.onload=ev=>{const nm=file.name.replace(/\.[^.]+$/,"").replace(/_/g," ");sBtnO(p=>{const nx=[...p,{id:Date.now()+""+Math.random(),name:nm,src:ev.target.result}];if(!btnSrc)sBtn(nx[0].src);return nx;});};r.readAsDataURL(file);});}},
+                { ref:React.createRef(), label:"3. Creator Images", hint:"Upload all creator photos — non-designer will pick from these", opts:library,
+                  onChange:e=>{if(!e.target.files)return;Array.from(e.target.files).forEach(file=>{const r=new FileReader();r.onload=ev=>{const nm=file.name.replace(/\.[^.]+$/,"").replace(/_/g," ");sLib(p=>[...p,{id:Date.now()+""+Math.random(),name:nm,src:ev.target.result}]);};r.readAsDataURL(file);});}},
               ].map((it,i)=>(
                 <div key={i} style={{ marginBottom:14 }}>
                   <label style={{ fontSize:12, fontWeight:700, color:it.opts.length>0?"#00d4aa":"#888", display:"block", marginBottom:3 }}>{it.opts.length>0?"✓ ":""}{it.label}</label>
@@ -426,7 +445,7 @@
           <div style={{ height:"100vh", background:"#0a0a0a", color:"#fff", fontFamily:"Arial,sans-serif", display:"flex", flexDirection:"column", overflow:"hidden" }}>
             <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"8px 14px", borderBottom:"1px solid #1a1a1a", flexShrink:0 }}>
               <span style={{ fontSize:15, fontWeight:800 }}>Daily Thumbnail <span style={{ fontSize:10, color:"#444", fontWeight:400, marginLeft:6 }}>360×454 Portrait</span></span>
-              <button onClick={()=>sSD(false)} style={{ background:"transparent", border:"1px solid #222", color:"#555", padding:"4px 10px", borderRadius:5, fontSize:10, cursor:"pointer" }}>⚙ Re-upload layers</button>
+              {IS_ADMIN && <button onClick={()=>sSD(false)} style={{ background:"transparent", border:"1px solid #222", color:"#555", padding:"4px 10px", borderRadius:5, fontSize:10, cursor:"pointer" }}>⚙ Re-upload layers</button>}
             </div>
 
             <div style={{ display:"flex", flex:1, overflow:"hidden" }}>
@@ -486,37 +505,37 @@
                 </Section>
 
                 <Section title="Creator Image" icon="👤" id="creator" open={openSection==="creator"} onToggle={toggleSection}>
-                  <div style={{ display:"flex", gap:8, alignItems:"center" }}>
-                    <div onClick={()=>crRef.current&&crRef.current.click()} style={{ width:50, height:50, borderRadius:8, border:creatorSrc?"2px solid #00d4aa":"2px dashed #333", overflow:"hidden", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center", background:"#111", flexShrink:0 }}>
-                      {creatorSrc?<img src={creatorSrc} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }}/>:<span style={{ color:"#444", fontSize:20 }}>+</span>}
-                    </div>
-                    <div style={{ flex:1 }}>
-                      <button onClick={()=>crRef.current&&crRef.current.click()} style={{ width:"100%", padding:"5px 0", borderRadius:6, border:"1px solid #333", background:"#111", color:"#888", fontSize:11, cursor:"pointer", marginBottom:4 }}>{creatorSrc?"Replace photo":"Upload photo"}</button>
-                      <button onClick={()=>sLO(!libOpen)} style={{ width:"100%", padding:"5px 0", borderRadius:6, border:libOpen?"1px solid #00d4aa":"1px solid #333", background:libOpen?"#0a201a":"#111", color:libOpen?"#00d4aa":"#888", fontSize:11, cursor:"pointer" }}>Library ({library.length})</button>
-                    </div>
-                    <input ref={crRef} type="file" accept="image/*" onChange={e=>rdFile(e).then(d=>{if(d){sCS(d);sIX(0);sIY(0);sIZ(100);}})} style={{ display:"none" }}/>
-                  </div>
-                  {libOpen && (
-                    <div style={{ background:"#0d0d0d", borderRadius:8, padding:8, border:"1px solid #1a1a1a" }}>
-                      <div style={{ display:"flex", gap:6, marginBottom:7, alignItems:"center" }}>
-                        <input value={libSearch} onChange={e=>sLS(e.target.value)} placeholder="Search…" style={{ flex:1, padding:"6px 8px", borderRadius:5, border:"1px solid #222", background:"#111", color:"#fff", fontSize:11, outline:"none" }}/>
-                        <button onClick={()=>libRef.current&&libRef.current.click()} style={{ padding:"6px 10px", borderRadius:5, border:"1px solid #333", background:"#111", color:"#00d4aa", fontSize:11, cursor:"pointer" }}>+ Add</button>
-                        <input ref={libRef} type="file" accept="image/*" multiple onChange={e=>{if(!e.target.files)return;Array.from(e.target.files).forEach(file=>{const r=new FileReader();r.onload=ev=>{const nm=file.name.replace(/\.[^.]+$/,"").replace(/_/g," ");sLib(p=>[{id:Date.now()+""+Math.random(),name:nm,src:ev.target.result},...p]);};r.readAsDataURL(file);});}} style={{ display:"none" }}/>
+                  {/* Search */}
+                  {library.length > 6 && (
+                    <input value={libSearch} onChange={e=>sLS(e.target.value)} placeholder="Search creator name…"
+                      style={{ width:"100%", padding:"7px 10px", borderRadius:6, border:"1px solid #222", background:"#111", color:"#fff", fontSize:12, outline:"none", boxSizing:"border-box" }}/>
+                  )}
+                  {/* Creator grid */}
+                  {filteredLib.length === 0
+                    ? <div style={{ textAlign:"center", color:"#444", fontSize:12, padding:"16px 0" }}>No creators found</div>
+                    : <div style={{ display:"grid", gridTemplateColumns:"repeat(4,1fr)", gap:7, maxHeight:340, overflowY:"auto" }}>
+                        {filteredLib.map(it=>(
+                          <div key={it.id} onClick={()=>{sCS(it.src);sIX(0);sIY(0);sIZ(100);}}
+                            style={{ cursor:"pointer", display:"flex", flexDirection:"column", alignItems:"center", gap:4 }}>
+                            <div style={{ width:"100%", aspectRatio:"1", borderRadius:8, overflow:"hidden", border:creatorSrc===it.src?"2px solid #00d4aa":"2px solid #222" }}>
+                              <img src={it.src} alt={it.name} style={{ width:"100%", height:"100%", objectFit:"cover" }}/>
+                            </div>
+                            <span style={{ fontSize:9, color:creatorSrc===it.src?"#00d4aa":"#666", textAlign:"center", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", width:"100%" }}>{it.name}</span>
+                          </div>
+                        ))}
                       </div>
-                      {filteredLib.length===0
-                        ?<div style={{ textAlign:"center", color:"#333", fontSize:11, padding:"10px 0" }}>{library.length===0?"No creators yet":"No match"}</div>
-                        :<div style={{ display:"grid", gridTemplateColumns:"repeat(5,1fr)", gap:5, maxHeight:160, overflowY:"auto" }}>
-                          {filteredLib.map(it=>(
-                            <div key={it.id} style={{ position:"relative", cursor:"pointer" }}>
-                              <div onClick={()=>selectLib(it)} style={{ aspectRatio:"1", borderRadius:6, overflow:"hidden", border:creatorSrc===it.src?"2px solid #00d4aa":"1px solid #222" }}>
-                                <img src={it.src} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }}/></div>
-                              <div onClick={e=>{e.stopPropagation();removeLib(it.id);}} style={{ position:"absolute", top:-3, right:-3, width:14, height:14, borderRadius:7, background:"#f44", color:"#fff", fontSize:8, display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer" }}>✕</div>
-                            </div>))}
-                        </div>}
+                  }
+                  {/* Admin-only: add more creators without going to setup */}
+                  {IS_ADMIN && (
+                    <div style={{ borderTop:"1px solid #1a1a1a", paddingTop:8, display:"flex", justifyContent:"flex-end" }}>
+                      <button onClick={()=>libRef.current&&libRef.current.click()} style={{ padding:"5px 12px", borderRadius:6, border:"1px solid #333", background:"#111", color:"#00d4aa", fontSize:11, cursor:"pointer" }}>+ Add creators</button>
+                      <input ref={libRef} type="file" accept="image/*" multiple onChange={e=>{if(!e.target.files)return;Array.from(e.target.files).forEach(file=>{const r=new FileReader();r.onload=ev=>{const nm=file.name.replace(/\.[^.]+$/,"").replace(/_/g," ");sLib(p=>[...p,{id:Date.now()+""+Math.random(),name:nm,src:ev.target.result}]);};r.readAsDataURL(file);});}} style={{ display:"none" }}/>
                     </div>
                   )}
+                  {/* Image position controls — only show once a creator is selected */}
                   {creatorSrc && (
-                    <div style={{ display:"flex", flexDirection:"column", gap:7 }}>
+                    <div style={{ display:"flex", flexDirection:"column", gap:7, borderTop:"1px solid #1a1a1a", paddingTop:8 }}>
+                      <span style={{ fontSize:10, color:"#555" }}>Adjust position</span>
                       <SliderRow label="Zoom" value={imgZoom} min={50} max={200} unit="%" onChange={sIZ}/>
                       <SliderRow label="Horizontal" value={imgX} min={-150} max={150} unit="px" onChange={sIX}/>
                       <SliderRow label="Vertical" value={imgY} min={-150} max={150} unit="px" onChange={sIY}/>

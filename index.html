@@ -193,8 +193,8 @@ function App(){
   useEffect(()=>{
     (async()=>{
       try{const r=await window.storage.get("creators");if(r?.value)setCreators(JSON.parse(r.value));}catch(e){}
-      try{const r=await window.storage.get("bg-list");if(r?.value){const d=JSON.parse(r.value);setBgList(d);if(d.length>0)setBg(d[0].src);}}catch(e){}
-      try{const r=await window.storage.get("btn-list");if(r?.value){const d=JSON.parse(r.value);setBtnList(d);if(d.length>0)setBtn(d[0].src);}}catch(e){}
+      try{const r=await window.storage.get("bg-list");if(r?.value){const d=JSON.parse(r.value);setBgList(d);if(d.length>0)setBg(d[Math.min(13,d.length-1)].src);}}catch(e){}
+      try{const r=await window.storage.get("btn-list");if(r?.value){const d=JSON.parse(r.value);setBtnList(d);if(d.length>0)setBtn(d[Math.min(2,d.length-1)].src);}}catch(e){}
       setLibLoading(false);
     })();
   },[]);

@@ -75,7 +75,7 @@
         flag:        { cx: 179.19, y: 334.68, w: 35.9, h: 20.04 },
         button:      { x: 33, y: 363, w: 294, h: 48 },
       };
-      const PREVIEW_W = 220;
+      const PREVIEW_W = 280;
       const PREVIEW_H = Math.round(PREVIEW_W * (P.frame.h / P.frame.w));
       const PREVIEW_S = PREVIEW_W / P.frame.w;
 
@@ -431,7 +431,7 @@
 
             <div style={{ display:"flex", flex:1, overflow:"hidden" }}>
               {/* LEFT */}
-              <div style={{ width:280, flexShrink:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", borderRight:"1px solid #1a1a1a", background:"#0d0d0d", padding:"14px 12px", gap:12 }}>
+              <div style={{ width:"40%", flexShrink:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", borderRight:"1px solid #1a1a1a", background:"#0d0d0d", padding:"14px 12px", gap:12 }}>
                 <div style={{ borderRadius:10, overflow:"hidden", backgroundImage:"repeating-conic-gradient(#1a1a1a 0% 25%,#111 0% 50%)", backgroundSize:"10px 10px" }}>
                   <canvas ref={canvasRef} width={PREVIEW_W} height={PREVIEW_H} style={{ display:"block", width:PREVIEW_W, height:PREVIEW_H }}/>
                 </div>

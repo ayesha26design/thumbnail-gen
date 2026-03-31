@@ -20,7 +20,7 @@
       const { useState, useRef, useCallback, useEffect } = React;
 
       // ── CHANGE THIS PASSWORD ──────────────────────────────────────
-      const SETUP_PASSWORD = "admin2611";
+      const SETUP_PASSWORD = "admin1234";
       // ─────────────────────────────────────────────────────────────
 
       window.storage = {
@@ -497,19 +497,23 @@
             {activeTab==="setup"&&isAdminUnlocked&&(
               <div style={{overflowY:"auto",flex:1,padding:16}}>
 
-                {/* Export button — pinned at top */}
-                {allReady&&(
-                  <div style={{marginBottom:20,background:"#0a201a",border:"1px solid #00d4aa",borderRadius:10,padding:14,display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
+                {/* Export button — always visible at top when any assets exist */}
+                <div style={{marginBottom:20,background: bgOptions.length>0||library.length>0?"#0a201a":"#111",border: bgOptions.length>0||library.length>0?"1px solid #00d4aa":"1px solid #2a2a2a",borderRadius:10,padding:14}}>
+                  <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,flexWrap:"wrap"}}>
                     <div>
-                      <p style={{fontSize:12,fontWeight:700,color:"#00d4aa",marginBottom:2}}>📦 Ready to export</p>
-                      <p style={{fontSize:10,color:"#555"}}>{bgOptions.length} bg · {btnOptions.length} buttons · {library.length} creators — baked into the HTML</p>
+                      <p style={{fontSize:12,fontWeight:700,color:"#00d4aa",marginBottom:2}}>📦 Export Pre-loaded HTML</p>
+                      <p style={{fontSize:10,color:"#666",marginBottom:0}}>{bgOptions.length} bg · {btnOptions.length} buttons · {library.length} creators baked in</p>
                     </div>
                     <button onClick={()=>exportPreloadedHTML(bgOptions,btnOptions,library)}
-                      style={{padding:"10px 20px",borderRadius:8,border:"none",background:"linear-gradient(135deg,#00d4aa,#7028f5)",color:"#fff",fontSize:12,fontWeight:800,cursor:"pointer",whiteSpace:"nowrap"}}>
+                      disabled={bgOptions.length===0&&btnOptions.length===0&&library.length===0}
+                      style={{padding:"10px 20px",borderRadius:8,border:"none",background:bgOptions.length>0||library.length>0?"linear-gradient(135deg,#00d4aa,#7028f5)":"#222",color:bgOptions.length>0||library.length>0?"#fff":"#555",fontSize:12,fontWeight:800,cursor:bgOptions.length>0||library.length>0?"pointer":"default",whiteSpace:"nowrap"}}>
                       ⬇ Download Pre-loaded index.html
                     </button>
                   </div>
-                )}
+                  <p style={{fontSize:10,color:"#444",marginTop:8,lineHeight:1.5}}>
+                    Upload this file to GitHub to replace your current one — anyone opening the link gets the tool fully loaded.
+                  </p>
+                </div>
 
                 <p style={{fontSize:12,color:"#555",marginBottom:20}}>Upload your assets once. Saved in the browser for everyone using the tool.</p>
 
